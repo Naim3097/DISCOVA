@@ -1,17 +1,125 @@
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-[#F2F4F5] text-[#33454F] flex items-center justify-center px-6">
-      <div className="max-w-md w-full bg-white px-10 py-12" style={{ boxShadow: "0 1px 2px rgba(13,32,48,.05)" }}>
-        <p className="text-[11px] tracking-[.14em] uppercase text-[#6B7C86]">
-          DISCOVA <span className="mx-1 text-[#C9D3D8]">·</span> powered by lean.X digital
-        </p>
-        <h1 className="mt-4 text-3xl text-[#14252F]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-          Website Visibility Intelligence
-        </h1>
-        <div className="mt-8 border-t border-[#E1E7EA] pt-5 text-sm space-y-2">
-          <p className="flex justify-between"><span>Interface</span><span className="text-[#2C6549]">deployed</span></p>
-          <p className="flex justify-between"><span>Engine</span><span className="text-[#6B7C86]">stage 0 — not yet connected</span></p>
+import Link from "next/link";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+const BAND_COLOR: Record<string, string> = {
+  Critical: "var(--attn)",
+  Developing: "var(--improve)",
+  Fair: "var(--accent)",
+  Good: "var(--good)",
+  Excellent: "var(--good)",
+};
+
+const TIERS = [
+  { name: "Audit", copy: "The complete lean.X audit. Key pages, full check register, design review, client-ready PDF.", time: "~3 min" },
+  { name: "Investigation", copy: "The whole site. Crawls every page, finds the patterns and template-level causes behind the findings.", time: "~5 min" },
+  { name: "Intelligence", copy: "Adds the outside world. Performance field data, competitors you name, prioritised actions and a 30/60/90 plan.", time: "~15 min" },
+];
+
+export default async function Home() {
+  const client = db();
+
+  if (!client) {
+    return (
+      <Shell>
+        <div className="bg-[var(--paper)] px-8 py-10">
+          <h2 className="serif text-xl text-[var(--ink)]">Database not connected</h2>
+          <p className="mt-3 text-sm">
+            Add the three Supabase values in Vercel → Settings → Environment Variables, then redeploy:
+          </p>
+          <ul className="mt-3 space-y-1 font-mono text-[13px]">
+            <li>NEXT_PUBLIC_SUPABASE_URL</li>
+            <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
+            <li>SUPABASE_SERVICE_ROLE_KEY</li>
+          </ul>
         </div>
+      </Shell>
+    );
+  }
+
+  const [{ data: beat }, { data: runs, error }] = await Promise.all([
+    client.from("worker_heartbeat").select("last_beat, version").eq("id", 1).maybeSingle(),
+    client.from("runs").select("id, domain, tier, status, started_at, scores").order("started_at", { ascending: false }).limit(50),
+  ]);
+
+  const beatAge = beat ? (Date.now() - new Date(beat.last_beat).getTime()) / 1000 : null;
+  const engineAlive = beatAge !== null && beatAge < 90;
+
+  return (
+    <Shell>
+      {/* Engine status */}
+      <div className="bg-[var(--paper)] px-8 py-5 flex items-baseline justify-between border-b border-[var(--hair)]">
+        <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Engine</span>
+        <span className="text-sm" style={{ color: engineAlive ? "var(--good)" : "var(--attn)" }}>
+          {engineAlive
+            ? `alive — heartbeat ${Math.round(beatAge!)}s ago (${beat!.version})`
+            : beat ? `stale — last heartbeat ${Math.round(beatAge!)}s ago` : "no heartbeat yet"}
+        </span>
+      </div>
+
+      {/* New analysis — honest placeholder until stage 4 */}
+      <div className="bg-[var(--paper)] px-8 py-7 border-b border-[var(--hair)]">
+        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">New analysis</p>
+        <div className="mt-4">
+          {TIERS.map((t, i) => (
+            <div key={t.name} className={`flex items-baseline gap-4 py-3 ${i > 0 ? "border-t border-[var(--hair)]" : ""} opacity-45`}>
+              <span className="serif text-lg text-[var(--ink)] w-36 shrink-0">{t.name}</span>
+              <span className="text-sm flex-1">{t.copy}</span>
+              <span className="text-xs text-[var(--faint)] shrink-0">{t.time}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-[var(--faint)]">The engine connects at stage 4 — runs below are real audit data.</p>
+      </div>
+
+      {/* Runs */}
+      <div className="bg-[var(--paper)] px-8 py-7">
+        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
+        {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
+        {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
+        <div className="mt-2">
+          {runs?.map((r) => {
+            const overall = r.scores?.overall as number | undefined;
+            const band = r.scores?.band as string | undefined;
+            return (
+              <Link key={r.id} href={`/run/${r.id}`}
+                className="flex items-baseline gap-4 py-4 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3">
+                <span className="serif text-lg text-[var(--ink)] flex-1 truncate">{r.domain}</span>
+                <span className="text-xs text-[var(--faint)] w-28 shrink-0 capitalize">{r.tier}</span>
+                <span className="text-xs text-[var(--faint)] w-28 shrink-0">
+                  {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+                {overall !== undefined ? (
+                  <span className="w-32 shrink-0 text-right">
+                    <span className="serif text-xl text-[var(--ink)]">{overall}</span>
+                    <span className="text-xs text-[var(--faint)]">/100</span>{" "}
+                    <span className="text-xs" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>{band}</span>
+                  </span>
+                ) : (
+                  <span className="w-32 shrink-0 text-right text-xs text-[var(--faint)]">{r.status}</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="min-h-screen px-6 py-10">
+      <div className="max-w-3xl mx-auto">
+        <header className="flex items-baseline justify-between pb-3">
+          <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
+            <span className="text-[var(--ink)] font-semibold">DISCOVA</span>
+            <span className="mx-1.5 text-[var(--rule)]">·</span>powered by lean.X digital
+          </span>
+          <span className="text-[11px] text-[var(--faint)]">internal</span>
+        </header>
+        <div className="border-t-2 border-[var(--ink)]">{children}</div>
       </div>
     </main>
   );
