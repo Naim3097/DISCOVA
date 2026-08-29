@@ -67,7 +67,7 @@ async function callWriter(prompt) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 1400,
+      max_tokens: 4000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -75,7 +75,7 @@ async function callWriter(prompt) {
   const data = await res.json();
   const text = data.content?.map((b) => b.text ?? "").join("") ?? "";
   const json = text.match(/\{[\s\S]*\}/)?.[0];
-  if (!json) throw new Error("writer returned no JSON");
+  if (!json) throw new Error(`writer returned no JSON (stop: ${data.stop_reason}, blocks: ${(data.content ?? []).map((b) => b.type).join("+") || "none"})`);
   return JSON.parse(json);
 }
 
