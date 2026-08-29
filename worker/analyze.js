@@ -112,7 +112,7 @@ async function probe(domain, log) {
 
 async function render(base, log, rawBody) {
   log("rendering in Chrome");
-  const browser = await chromium.launch({ args: ["--no-sandbox"] });
+  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   const dom = {};
   try {
     const page = await browser.newPage({ userAgent: UA, viewport: { width: 1280, height: 900 } });
@@ -271,7 +271,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   await onStatus("crawling");
   ctx.probes = await probe(domain, log);
   if ((ctx.probes.home?.code ?? 0) === 0 && !ctx.probes.home?.body) {
-    throw new Error("the site did not respond; nothing could be assessed");
+    throw new Error("the site did not respond to our analysis server. It may be down, or it only accepts visitors from certain countries (common for Malaysian-only sites when the server sits abroad)");
   }
   let renderFailed = null;
   try {
