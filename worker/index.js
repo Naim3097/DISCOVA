@@ -6,7 +6,7 @@ import pg from "pg";
 import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 
-const VERSION = "0.2.1-stage3";
+const VERSION = "0.2.2-stage3";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
