@@ -322,7 +322,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     })),
     design,
     gapCandidates: gapCandidates(ctx),
-  }).catch((e) => { log("writer unavailable: " + e.message); return null; });
+  }).catch((e) => { log("writer threw: " + e.message); return { __error: "threw: " + (e.stack ?? e.message).slice(0, 300) }; });
 
   if (narrative?.__error) {
     scores.narrative_error = narrative.__error;
