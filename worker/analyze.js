@@ -5,11 +5,12 @@ import { CHECKS, collectStrengths } from "./checks.js";
 import { designReview } from "./design.js";
 import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
+import { surveySite } from "./survey.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
 
-async function httpGet(url, { maxHops = 5, method = "GET", timeout = 15000 } = {}) {
+export async function httpGet(url, { maxHops = 5, method = "GET", timeout = 15000 } = {}) {
   let hops = 0, current = url;
   const t0 = Date.now();
   let ttfb = null;
@@ -263,7 +264,7 @@ async function render(base, log, rawBody) {
   return dom;
 }
 
-export async function runAudit(domain, { onStatus = () => {}, log = console.log } = {}) {
+export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit" } = {}) {
   const ctx = { domain, probes: {}, dom: {} };
 
   await onStatus("crawling");
@@ -311,8 +312,24 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     design_pending: !design,
     checks_run: CHECKS.length,
     coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
-    engine: "audit-v1",
+    engine: tier === "investigation" ? "investigation-v1" : "audit-v1",
   };
+  let invFindings = [], surveyPages = [];
+  if (tier === "investigation") {
+    await onStatus("surveying");
+    const survey = await surveySite(ctx, {
+      httpGet, log,
+      beat: () => Promise.resolve(onStatus("surveying")),
+    }).catch((e) => { log("survey failed: " + e.message); return null; });
+    if (survey) {
+      scores.investigation = survey.summary;
+      invFindings = survey.patterns;
+      surveyPages = survey.pages.map((p) => ({ url: p.url, template: p.template, status: p.status }));
+    } else {
+      scores.investigation = { error: "survey failed; score unaffected (fixed core)" };
+    }
+  }
+
   await onStatus("writing");
   const narrative = await writeNarrative({
     domain,
@@ -345,5 +362,5 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     }
   }
 
-  return { scores, findings, ctx };
+  return { scores, findings: [...findings, ...invFindings], pages: surveyPages, ctx };
 }

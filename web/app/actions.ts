@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 
 export async function startAudit(formData: FormData) {
   const domain = String(formData.get("domain") ?? "").trim();
+  const rawTier = String(formData.get("tier") ?? "audit");
+  const tier = ["audit", "investigation"].includes(rawTier) ? rawTier : "audit";
   const base = process.env.WORKER_URL;
   if (!base) redirect("/?err=worker");
   let id: string | null = null;
   try {
     const r = await fetch(
-      `${base.replace(/\/+$/, "")}/analyze?domain=${encodeURIComponent(domain)}`,
+      `${base.replace(/\/+$/, "")}/analyze?domain=${encodeURIComponent(domain)}&tier=${tier}`,
       {
         method: "POST",
         cache: "no-store",

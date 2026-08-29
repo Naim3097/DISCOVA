@@ -72,10 +72,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
               <span className="text-sm flex-1">The complete lean.X audit. Key pages, full check register, client-ready PDF.</span>
               <span className="text-xs text-[var(--faint)] shrink-0">~2 min</span>
             </label>
-            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] opacity-40">
-              <input type="radio" name="tier" value="investigation" disabled className="translate-y-0.5" />
+            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] cursor-pointer">
+              <input type="radio" name="tier" value="investigation" className="translate-y-0.5 accent-[var(--accent)]" />
               <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Investigation</span>
-              <span className="text-sm flex-1">The whole site — patterns and template-level causes. Arrives at stage 8.</span>
+              <span className="text-sm flex-1">Everything in Audit, plus a site-wide crawl: the patterns and template-level causes behind the findings. Same score.</span>
               <span className="text-xs text-[var(--faint)] shrink-0">~5 min</span>
             </label>
             <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] opacity-40">

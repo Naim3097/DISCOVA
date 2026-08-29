@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.6.1-stage7";
+const VERSION = "0.7.0-stage8";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -107,9 +107,13 @@ function startServer() {
         if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
           res.writeHead(400); res.end("valid domain required"); return;
         }
+        const tier = u.searchParams.get("tier") ?? "audit";
+        if (!["audit", "investigation"].includes(tier)) {
+          res.writeHead(400); res.end("tier not available yet"); return;
+        }
         const { rows: [run] } = await pool.query(
           `insert into runs (domain, tier, framework_version, status)
-           values ($1, 'audit', '2.2', 'queued') returning id`, [domain]);
+           values ($1, $2, '2.2', 'queued') returning id`, [domain, tier]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
         return;
@@ -124,13 +128,13 @@ function startServer() {
   server.listen(PORT, () => console.log(`[discova-worker] http listening on :${PORT}`));
 }
 
-async function processRun(runId, domain) {
+async function processRun(runId, domain, tier = "audit") {
   const setStatus = (st) => pool.query(
     "update runs set status=$1, scores=jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text)) where id=$2",
     [st, runId]);
   const log = (m) => console.log(`[discova-worker] run ${runId.slice(0, 8)} ${domain}: ${m}`);
   try {
-    const { scores, findings } = await runAudit(domain, { onStatus: setStatus, log });
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: setStatus, log, tier });
     await setStatus("writing");
     for (const f of findings) {
       await pool.query(
@@ -142,6 +146,11 @@ async function processRun(runId, domain) {
          f.evidence_label, f.verification ?? "none", f.confidence ?? 1.0, f.reach ?? null,
          f.internal_detail ?? null, f.client_summary ?? null, f.effort ?? null,
          f.score_impact ?? 0]);
+    }
+    for (const p of pages ?? []) {
+      await pool.query(
+        "insert into pages (run_id, url, template_cluster, status_code) values ($1,$2,$3,$4)",
+        [runId, p.url, p.template, p.status]);
     }
     await pool.query(
       "update runs set status='done', finished_at=now(), scores=$1 where id=$2",
@@ -181,11 +190,12 @@ async function queueLoop(n) {
           scores = jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text))
         where id = (select id from runs where status = 'queued'
                     order by started_at asc limit 1 for update skip locked)
-        returning id, domain`);
+        returning id, domain, tier`);
       if (!job) { await new Promise((r) => setTimeout(r, 3000)); continue; }
       console.log(`[discova-worker] queue worker ${n} claimed ${job.domain}`);
       await pool.query("delete from findings where run_id=$1", [job.id]);
-      await processRun(job.id, job.domain);
+      await pool.query("delete from pages where run_id=$1", [job.id]);
+      await processRun(job.id, job.domain, job.tier ?? "audit");
     } catch (e) {
       console.error(`[discova-worker] queue worker ${n} error:`, e.message);
       await new Promise((r) => setTimeout(r, 5000));
@@ -199,8 +209,10 @@ async function main() {
   if (at !== -1) {
     const domain = process.argv[at + 1];
     const { writeFileSync } = await import("node:fs");
-    const { scores, findings } = await runAudit(domain, { onStatus: async () => {}, log: console.log });
-    writeFileSync("analyze-test.json", JSON.stringify({ scores, findings }, null, 2));
+    const tt = process.argv.indexOf("--tier");
+    const tier = tt !== -1 ? process.argv[tt + 1] : "audit";
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: async () => {}, log: console.log, tier });
+    writeFileSync("analyze-test.json", JSON.stringify({ scores, findings, pages }, null, 2));
     console.log(`
 === ${domain} — ${scores.overall}/100 ${scores.band}${scores.design_pending ? " (design pending)" : ` (design ${scores.design_total.points}/24)`} ===`);
     for (const a of scores.areas) console.log(`  ${a.label.padEnd(22)} ${String(a.score).padStart(3)}  ${a.status}`);

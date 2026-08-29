@@ -42,7 +42,7 @@ export function buildReportHtml(run, findings) {
     day: "numeric", month: "long", year: "numeric",
   });
   const recs = [...(findings ?? [])]
-    .filter((f) => f.client_summary)
+    .filter((f) => f.client_summary && !String(f.check_id ?? "").startsWith("inv-"))
     .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact)
     .slice(0, 6);
   const gapMax = gap ? Math.max(gap.value_a, gap.value_b, 1) : 1;

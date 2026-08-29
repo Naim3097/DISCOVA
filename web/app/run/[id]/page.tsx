@@ -38,10 +38,43 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   const subs: Sub[] = s.design_subscores ?? [];
   const gap = s.clearest_gap;
   const strengths: string[] = s.strengths ?? [];
-  const sorted = (findings ?? []).sort(
-    (a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact
-  );
+  const bySeverity = (a: any, b: any) =>
+    (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact;
+  const isInv = (f: any) => String(f.check_id ?? "").startsWith("inv-");
+  const sorted = (findings ?? []).filter((f) => !isInv(f)).sort(bySeverity);
+  const invSorted = (findings ?? []).filter(isInv).sort(bySeverity);
+  const inv = s.investigation;
   const gapMax = gap ? Math.max(gap.value_a, gap.value_b, 1) : 1;
+
+  const findingRow = (f: any) => (
+    <details key={f.id} className="border-t border-[var(--hair)] first:border-t-0 group">
+      <summary className="py-3.5 flex items-baseline gap-3 cursor-pointer list-none hover:bg-[var(--ground)] -mx-3 px-3">
+        <span className="serif text-[13px] w-16 shrink-0" style={{ color: SEV_COLOR[f.severity] }}>
+          {f.severity}
+        </span>
+        <span className="text-[var(--ink)] text-[15px] flex-1">{f.title}</span>
+        <span className="text-[10px] text-[var(--faint)] uppercase tracking-wide shrink-0">
+          {f.evidence_label.replaceAll("_", " ")}
+        </span>
+        <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
+      </summary>
+      <div className="pb-5 pl-[76px] pr-4 space-y-3 text-[13px]">
+        {f.evidence && (
+          <p className="font-mono text-[12px] bg-[var(--ground)] px-3 py-2 whitespace-pre-wrap">{f.evidence}</p>
+        )}
+        {f.internal_detail && (
+          <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--muted)] block mb-0.5">Internal fix — never client-facing</span>{f.internal_detail}</p>
+        )}
+        {f.client_summary && (
+          <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--accent)] block mb-0.5">Client wording</span>{f.client_summary}</p>
+        )}
+        <p className="text-[11px] text-[var(--faint)]">
+          {f.check_id} · {f.category} · verified via {f.verification ?? "—"} · confidence {f.confidence} ·
+          reach {f.reach ?? "—"} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · score impact {f.score_impact}
+        </p>
+      </div>
+    </details>
+  );
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -199,41 +232,57 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             </section>
           )}
 
+          {/* Site-wide survey (Investigation tier) */}
+          {inv && (
+            <section className="px-8 py-7 border-b border-[var(--hair)]">
+              <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-3">Site-wide survey</p>
+              {inv.error ? (
+                <p className="text-sm text-[var(--attn)]">{inv.error}</p>
+              ) : (
+                <>
+                  <p className="text-[13px] text-[var(--muted)]">
+                    {inv.pages_fetched} pages fetched of {inv.pages_known} discovered ·{" "}
+                    {inv.templates?.length ?? 0} page templates shown
+                    {inv.sampled_out > 0 && <> · {inv.sampled_out} URLs sampled out (max {inv.caps?.per_template} per template)</>}
+                    {inv.cap_hit && <> · fetch cap of {inv.caps?.max_fetch} reached</>}
+                    {inv.deadline_hit && <> · time cap reached</>} · {inv.duration_s}s
+                  </p>
+                  {(inv.templates ?? []).length > 0 && (
+                    <div className="mt-4">
+                      {(inv.templates as { template: string; known: number; fetched: number }[]).map((t, i) => (
+                        <div key={t.template} className={`flex items-center gap-3 py-1.5 ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
+                          <span className="font-mono text-[12px] text-[var(--ink)] flex-1 truncate">{t.template}</span>
+                          <span className="text-[12px] text-[var(--muted)] shrink-0 tabular-nums">{t.known} known</span>
+                          <span className="text-[12px] text-[var(--faint)] shrink-0 tabular-nums w-20 text-right">{t.fetched} fetched</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
           {/* Findings */}
           {sorted.length > 0 && (
             <section className="px-8 py-7">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-2">
                 Findings — {sorted.length}
               </p>
-              {sorted.map((f) => (
-                <details key={f.id} className="border-t border-[var(--hair)] first:border-t-0 group">
-                  <summary className="py-3.5 flex items-baseline gap-3 cursor-pointer list-none hover:bg-[var(--ground)] -mx-3 px-3">
-                    <span className="serif text-[13px] w-16 shrink-0" style={{ color: SEV_COLOR[f.severity] }}>
-                      {f.severity}
-                    </span>
-                    <span className="text-[var(--ink)] text-[15px] flex-1">{f.title}</span>
-                    <span className="text-[10px] text-[var(--faint)] uppercase tracking-wide shrink-0">
-                      {f.evidence_label.replaceAll("_", " ")}
-                    </span>
-                    <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
-                  </summary>
-                  <div className="pb-5 pl-[76px] pr-4 space-y-3 text-[13px]">
-                    {f.evidence && (
-                      <p className="font-mono text-[12px] bg-[var(--ground)] px-3 py-2 whitespace-pre-wrap">{f.evidence}</p>
-                    )}
-                    {f.internal_detail && (
-                      <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--muted)] block mb-0.5">Internal fix — never client-facing</span>{f.internal_detail}</p>
-                    )}
-                    {f.client_summary && (
-                      <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--accent)] block mb-0.5">Client wording</span>{f.client_summary}</p>
-                    )}
-                    <p className="text-[11px] text-[var(--faint)]">
-                      {f.check_id} · {f.category} · verified via {f.verification ?? "—"} · confidence {f.confidence} ·
-                      reach {f.reach ?? "—"} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · score impact {f.score_impact}
-                    </p>
-                  </div>
-                </details>
-              ))}
+              {sorted.map(findingRow)}
+            </section>
+          )}
+
+          {/* Investigation patterns — never scored, never in the client PDF */}
+          {invSorted.length > 0 && (
+            <section className="px-8 py-7 border-t border-[var(--hair)]">
+              <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
+                Site-wide patterns — {invSorted.length}
+              </p>
+              <p className="text-[12px] text-[var(--faint)] mt-1 mb-2">
+                Below the scoring line. The score comes from the fixed core at every tier; these explain it.
+              </p>
+              {invSorted.map(findingRow)}
             </section>
           )}
         </div>
