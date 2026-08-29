@@ -77,6 +77,12 @@ export default async function Home() {
       <div className="bg-[var(--paper)] px-8 py-7">
         <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
         {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
+        {error && (
+          <p className="mt-1 text-[11px] text-[var(--faint)] break-all">
+            diag: url={process.env.NEXT_PUBLIC_SUPABASE_URL} · key={process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 12)}…
+            ({process.env.SUPABASE_SERVICE_ROLE_KEY?.length} chars)
+          </p>
+        )}
         {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
         <div className="mt-2">
           {runs?.map((r) => {
