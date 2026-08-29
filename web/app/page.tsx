@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { startAudit, deleteRun } from "@/app/actions";
 import { signOut } from "@/app/login/actions";
+import { AutoRefresh } from "@/app/refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   const beatAge = beat ? (Date.now() - new Date(beat.last_beat).getTime()) / 1000 : null;
   const engineAlive = beatAge !== null && beatAge < 90;
 
+  const anyRunning = (runs ?? []).some((r) => !["done", "failed", "partial"].includes(r.status));
+
   return (
     <Shell>
+      {anyRunning && <AutoRefresh every={5000} />}
       {/* Engine status */}
       <div className="bg-[var(--paper)] px-8 py-5 flex items-baseline justify-between border-b border-[var(--hair)]">
         <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Engine</span>

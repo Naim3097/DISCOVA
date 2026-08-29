@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { AutoRefresh } from "@/app/refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -103,8 +104,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
               <span className="text-sm text-[var(--accent)]">
                 Analysing {run.domain} — {run.status}…
               </span>
-              <span className="text-xs text-[var(--faint)]">this page refreshes itself</span>
-              <script dangerouslySetInnerHTML={{ __html: "setTimeout(()=>location.reload(),4000)" }} />
+              <span className="text-xs text-[var(--faint)]">updating live</span>
+              <AutoRefresh />
             </div>
           )}
           {run.status === "partial" && (
