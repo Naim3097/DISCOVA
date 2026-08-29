@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.6.0-stage7";
+const VERSION = "0.6.1-stage7";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -125,7 +125,9 @@ function startServer() {
 }
 
 async function processRun(runId, domain) {
-  const setStatus = (st) => pool.query("update runs set status=$1 where id=$2", [st, runId]);
+  const setStatus = (st) => pool.query(
+    "update runs set status=$1, scores=jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text)) where id=$2",
+    [st, runId]);
   const log = (m) => console.log(`[discova-worker] run ${runId.slice(0, 8)} ${domain}: ${m}`);
   try {
     const { scores, findings } = await runAudit(domain, { onStatus: setStatus, log });
@@ -153,17 +155,36 @@ async function processRun(runId, domain) {
   }
 }
 
+async function recoverDeadRuns() {
+  const r = await pool.query(`
+    update runs set
+      scores = jsonb_set(coalesce(scores,'{}'::jsonb), '{requeues}',
+               to_jsonb(coalesce((scores->>'requeues')::int, 0) + 1)),
+      status = case when coalesce((scores->>'requeues')::int, 0) >= 2
+                    then 'failed' else 'queued' end,
+      finished_at = case when coalesce((scores->>'requeues')::int, 0) >= 2
+                    then now() else null end
+    where status in ('crawling','checking','verifying','scoring','writing')
+      and coalesce((scores->>'beat')::timestamptz, started_at) < now() - interval '4 minutes'`);
+  if (r.rowCount) console.log(`[discova-worker] recovered ${r.rowCount} stalled run(s)`);
+  await pool.query(`
+    update runs set scores = scores || '{"error":"interrupted repeatedly by worker restarts"}'::jsonb
+    where status = 'failed' and (scores->>'requeues')::int >= 3 and scores->>'error' is null`);
+}
+
 async function queueLoop(n) {
   console.log(`[discova-worker] queue worker ${n} started`);
   for (;;) {
     try {
       const { rows: [job] } = await pool.query(`
-        update runs set status = 'crawling'
+        update runs set status = 'crawling',
+          scores = jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text))
         where id = (select id from runs where status = 'queued'
                     order by started_at asc limit 1 for update skip locked)
         returning id, domain`);
       if (!job) { await new Promise((r) => setTimeout(r, 3000)); continue; }
       console.log(`[discova-worker] queue worker ${n} claimed ${job.domain}`);
+      await pool.query("delete from findings where run_id=$1", [job.id]);
       await processRun(job.id, job.domain);
     } catch (e) {
       console.error(`[discova-worker] queue worker ${n} error:`, e.message);
@@ -197,24 +218,10 @@ async function main() {
   }
   await beat();
   if (pool) {
-    // Runs the previous process died holding go back to the queue (max 2 retries).
-    await pool.query(`
-      update runs set
-        scores = jsonb_set(coalesce(scores,'{}'::jsonb), '{requeues}',
-                 to_jsonb(coalesce((scores->>'requeues')::int, 0) + 1)),
-        status = case when coalesce((scores->>'requeues')::int, 0) >= 2
-                      then 'failed' else 'queued' end,
-        finished_at = case when coalesce((scores->>'requeues')::int, 0) >= 2
-                      then now() else null end
-      where status in ('crawling','checking','verifying','scoring','writing')`
-    ).then(r => { if (r.rowCount) console.log(`[discova-worker] recovered ${r.rowCount} in-flight run(s)`); })
-     .catch(() => {});
-    await pool.query(`
-      update runs set scores = scores || '{"error":"interrupted repeatedly by worker restarts"}'::jsonb
-      where status = 'failed' and (scores->>'requeues')::int >= 3 and scores->>'error' is null`
-    ).catch(() => {});
+    await recoverDeadRuns().catch((e) => console.error("[discova-worker] recovery failed:", e.message));
   }
   if (once) { if (pool) await pool.end(); return; }
+  if (pool) setInterval(() => recoverDeadRuns().catch(() => {}), 120_000);
   setInterval(() => beat().catch((e) => console.error("[discova-worker] beat failed:", e.message)), 30_000);
   startServer();
   if (pool) {
