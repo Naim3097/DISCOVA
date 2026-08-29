@@ -270,7 +270,18 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
 
   await onStatus("crawling");
   ctx.probes = await probe(domain, log);
-  ctx.dom = await render(ctx.probes.base ?? `https://${domain}`, log, ctx.probes.home?.body);
+  if ((ctx.probes.home?.code ?? 0) === 0 && !ctx.probes.home?.body) {
+    throw new Error("the site did not respond; nothing could be assessed");
+  }
+  let renderFailed = null;
+  try {
+    if (process.env.DISCOVA_FORCE_RENDER_FAIL) throw new Error("forced render failure (test hook)");
+    ctx.dom = await render(ctx.probes.base ?? `https://${domain}`, log, ctx.probes.home?.body);
+  } catch (e) {
+    renderFailed = e.message;
+    ctx.dom = {};
+    log(`render failed: ${e.message} — continuing with raw checks only`);
+  }
 
   await onStatus("checking");
   const findings = [];
@@ -289,6 +300,14 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     } catch (e) {
       log(`check ${check.id} crashed: ${e.message}`);
     }
+  }
+
+  if (renderFailed) {
+    const before = findings.length;
+    for (let k = findings.length - 1; k >= 0; k--) {
+      if (["rendered_dom", "runtime_js", "image_review"].includes(findings[k].verification)) findings.splice(k, 1);
+    }
+    log(`render-dependent findings dropped: ${before - findings.length}`);
   }
 
   await onStatus("verifying");
@@ -314,6 +333,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     checks_run: CHECKS.length,
     coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
     engine: tier === "audit" ? "audit-v1" : `${tier}-v1`,
+    ...(renderFailed ? { partial_note: "the page could not be rendered in a browser, so browser-verified checks were skipped" } : {}),
   };
   let invFindings = [], surveyPages = [];
   if (tier !== "audit") {

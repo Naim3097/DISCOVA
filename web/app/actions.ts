@@ -27,3 +27,13 @@ export async function startAudit(formData: FormData) {
   }
   redirect(id ? `/run/${id}` : "/?err=start");
 }
+
+export async function deleteRun(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    const { db } = await import("@/lib/db");
+    const client = db();
+    if (client) await client.from("runs").delete().eq("id", id); // findings + pages cascade
+  }
+  redirect("/");
+}

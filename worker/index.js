@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.8.0-stage9";
+const VERSION = "0.9.0-stage10";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -89,6 +89,10 @@ function startServer() {
         return;
       }
       if (u.pathname === "/run-scores") {
+        const secret = process.env.WORKER_SECRET;
+        if (secret && req.headers["x-worker-secret"] !== secret) {
+          res.writeHead(401); res.end("unauthorized"); return;
+        }
         if (!pool) { res.writeHead(503); res.end("no database"); return; }
         const rid = u.searchParams.get("runId");
         const { rows: [row] } = await pool.query("select domain, status, scores from runs where id=$1", [rid]);
@@ -156,10 +160,11 @@ async function processRun(runId, domain, tier = "audit", competitors = []) {
         "insert into pages (run_id, url, template_cluster, status_code) values ($1,$2,$3,$4)",
         [runId, p.url, p.template, p.status]);
     }
+    const finalStatus = scores.partial_note ? "partial" : "done";
     await pool.query(
-      "update runs set status='done', finished_at=now(), scores=$1 where id=$2",
-      [JSON.stringify(scores), runId]);
-    log(`done — ${scores.overall}/100 ${scores.band}, ${findings.length} findings`);
+      "update runs set status=$3, finished_at=now(), scores=$1 where id=$2",
+      [JSON.stringify(scores), runId, finalStatus]);
+    log(`${finalStatus} — ${scores.overall}/100 ${scores.band}, ${findings.length} findings`);
   } catch (e) {
     console.error(`[discova-worker] run ${runId} failed:`, e);
     await pool.query(

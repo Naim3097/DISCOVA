@@ -32,7 +32,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   ]);
   if (!run) notFound();
 
-  const running = !["done", "failed"].includes(run.status);
+  const running = !["done", "failed", "partial"].includes(run.status);
+  const settled = ["done", "partial"].includes(run.status);
   const s = run.scores ?? {};
   const areas: Area[] = s.areas ?? [];
   const subs: Sub[] = s.design_subscores ?? [];
@@ -101,6 +102,13 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
               <script dangerouslySetInnerHTML={{ __html: "setTimeout(()=>location.reload(),4000)" }} />
             </div>
           )}
+          {run.status === "partial" && (
+            <div className="px-8 py-5 border-b border-[var(--hair)]">
+              <span className="text-sm text-[var(--improve)]">
+                Partial run — {s.partial_note ?? "some checks could not be completed"}. The score reflects the checks that ran.
+              </span>
+            </div>
+          )}
           {run.status === "failed" && (
             <div className="px-8 py-5 border-b border-[var(--hair)]">
               <span className="text-sm text-[var(--attn)]">
@@ -113,17 +121,17 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
           <div className="px-8 pt-8 pb-7 border-b border-[var(--hair)]">
             <div className="flex items-baseline justify-between gap-4">
               <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
-              {run.status === "done" && (
+              {settled && (
                 <a href={`/api/run/${run.id}/pdf`} target="_blank"
                   className="shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-1.5 hover:bg-[var(--accent)] hover:text-white transition-colors">
                   Client PDF
                 </a>
               )}
             </div>
-            {run.status === "done" && s.narrative?.lead && (
+            {settled && s.narrative?.lead && (
               <p className="serif italic text-[17px] text-[var(--ink)] mt-3 max-w-xl">{s.narrative.lead}</p>
             )}
-            {run.status === "done" && (
+            {settled && (
               <div className="mt-6 flex items-start gap-8 flex-wrap">
                 <div>
                   <span className="serif text-6xl text-[var(--ink)] leading-none">{s.overall ?? "—"}</span>

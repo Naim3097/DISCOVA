@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { startAudit } from "@/app/actions";
+import { startAudit, deleteRun } from "@/app/actions";
+import { signOut } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             : beat ? `stale — last heartbeat ${Math.round(beatAge!)}s ago` : "no heartbeat yet"}
         </span>
       </div>
+      {!process.env.APP_PASSWORD && (
+        <div className="bg-[var(--paper)] px-8 py-3 border-b border-[var(--hair)]">
+          <p className="text-[12px] text-[var(--improve)]">
+            No team password set — anyone with the link can use this. Add APP_PASSWORD in Vercel to close the gate.
+          </p>
+        </div>
+      )}
 
       {/* New analysis */}
       <div className="bg-[var(--paper)] px-8 py-7 border-b border-[var(--hair)]">
@@ -104,28 +112,39 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           {runs?.map((r) => {
             const overall = r.scores?.overall as number | undefined;
             const band = r.scores?.band as string | undefined;
-            const running = !["done", "failed"].includes(r.status);
+            const running = !["done", "failed", "partial"].includes(r.status);
             return (
-              <Link key={r.id} href={`/run/${r.id}`}
-                className="flex items-baseline gap-4 py-4 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3">
-                <span className="serif text-lg text-[var(--ink)] flex-1 truncate">{r.domain}</span>
-                <span className="text-xs text-[var(--faint)] w-28 shrink-0 capitalize">{r.tier}</span>
-                <span className="text-xs text-[var(--faint)] w-28 shrink-0">
-                  {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                {overall !== undefined ? (
-                  <span className="w-32 shrink-0 text-right">
-                    <span className="serif text-xl text-[var(--ink)]">{overall}</span>
-                    <span className="text-xs text-[var(--faint)]">/100</span>{" "}
-                    <span className="text-xs" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>{band}</span>
+              <div key={r.id}
+                className="flex items-baseline gap-4 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3 group">
+                <Link href={`/run/${r.id}`} className="flex items-baseline gap-4 py-4 flex-1 min-w-0">
+                  <span className="serif text-lg text-[var(--ink)] flex-1 truncate">{r.domain}</span>
+                  <span className="text-xs text-[var(--faint)] w-28 shrink-0 capitalize">{r.tier}</span>
+                  <span className="text-xs text-[var(--faint)] w-28 shrink-0">
+                    {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </span>
-                ) : (
-                  <span className="w-32 shrink-0 text-right text-xs"
-                    style={{ color: running ? "var(--accent)" : "var(--attn)" }}>
-                    {running ? `${r.status}…` : r.status}
-                  </span>
-                )}
-              </Link>
+                  {overall !== undefined ? (
+                    <span className="w-32 shrink-0 text-right">
+                      <span className="serif text-xl text-[var(--ink)]">{overall}</span>
+                      <span className="text-xs text-[var(--faint)]">/100</span>{" "}
+                      <span className="text-xs" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>
+                        {r.status === "partial" ? "partial" : band}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="w-32 shrink-0 text-right text-xs"
+                      style={{ color: running ? "var(--accent)" : "var(--attn)" }}>
+                      {running ? `${r.status}…` : r.status}
+                    </span>
+                  )}
+                </Link>
+                <form action={deleteRun} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <input type="hidden" name="id" value={r.id} />
+                  <button type="submit" title="Delete this run and its findings"
+                    className="text-[var(--faint)] hover:text-[var(--attn)] text-sm px-1.5 py-3">
+                    ✕
+                  </button>
+                </form>
+              </div>
             );
           })}
         </div>
@@ -143,7 +162,16 @@ function Shell({ children }: { children: React.ReactNode }) {
             <span className="text-[var(--ink)] font-semibold">DISCOVA</span>
             <span className="mx-1.5 text-[var(--rule)]">·</span>powered by lean.X digital
           </span>
-          <span className="text-[11px] text-[var(--faint)]">internal</span>
+          <span className="text-[11px] text-[var(--faint)] flex items-baseline gap-3">
+            internal
+            {process.env.APP_PASSWORD && (
+              <form action={signOut}>
+                <button type="submit" className="hover:text-[var(--ink)] underline underline-offset-2">
+                  sign out
+                </button>
+              </form>
+            )}
+          </span>
         </header>
         <div className="border-t-2 border-[var(--ink)]">{children}</div>
       </div>
