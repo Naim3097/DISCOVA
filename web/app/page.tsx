@@ -129,20 +129,24 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
                     {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{" · "}
                     {new Date(r.started_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <span className="w-28 text-right shrink-0 text-[13px]">
-                    {overall !== undefined ? (
-                      <>
-                        <span className="font-semibold text-[15px] text-[var(--ink)] tabular-nums">{overall}</span>
-                        <span className="text-[10px] text-[var(--faint)]">/100</span>{" "}
-                        <span className="text-[10px]" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>
-                          {r.status === "partial" ? "partial" : band}
-                        </span>
-                      </>
-                    ) : running ? (
-                      <span className="text-[11px] font-mono text-[var(--accent)] animate-pulse">{r.status}…</span>
-                    ) : (
-                      <span className="text-[11px] font-mono text-[var(--attn)]">{r.status}</span>
-                    )}
+                  <span className="flex items-baseline justify-end gap-1.5 w-44 shrink-0">
+                    <span
+                      className={`text-[10px] font-mono text-right w-20 truncate ${running ? "animate-pulse" : ""}`}
+                      style={{
+                        color:
+                          r.status === "failed" ? "var(--attn)"
+                          : r.status === "partial" ? "var(--improve)"
+                          : running ? "var(--accent)"
+                          : BAND_COLOR[band ?? ""] ?? "var(--muted)",
+                      }}>
+                      {r.status === "failed" ? "failed" : r.status === "partial" ? "partial" : running ? `${r.status}…` : band}
+                    </span>
+                    <span className="font-semibold text-[15px] text-[var(--ink)] tabular-nums text-right w-8">
+                      {overall !== undefined ? overall : "—"}
+                    </span>
+                    <span className="text-[10px] text-[var(--faint)] w-7">
+                      {overall !== undefined ? "/100" : ""}
+                    </span>
                   </span>
                 </Link>
                 <form action={deleteRun} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
