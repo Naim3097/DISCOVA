@@ -32,6 +32,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   ]);
   if (!run) notFound();
 
+  const running = !["done", "failed"].includes(run.status);
   const s = run.scores ?? {};
   const areas: Area[] = s.areas ?? [];
   const subs: Sub[] = s.design_subscores ?? [];
@@ -57,38 +58,65 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         </header>
 
         <div className="border-t-2 border-[var(--ink)] bg-[var(--paper)]">
+          {/* In-progress banner */}
+          {running && (
+            <div className="px-8 py-5 border-b border-[var(--hair)] flex items-baseline justify-between">
+              <span className="text-sm text-[var(--accent)]">
+                Analysing {run.domain} — {run.status}…
+              </span>
+              <span className="text-xs text-[var(--faint)]">this page refreshes itself</span>
+              <script dangerouslySetInnerHTML={{ __html: "setTimeout(()=>location.reload(),4000)" }} />
+            </div>
+          )}
+          {run.status === "failed" && (
+            <div className="px-8 py-5 border-b border-[var(--hair)]">
+              <span className="text-sm text-[var(--attn)]">
+                This run failed{s.error ? `: ${s.error}` : "."}
+              </span>
+            </div>
+          )}
+
           {/* Title + overall */}
           <div className="px-8 pt-8 pb-7 border-b border-[var(--hair)]">
             <div className="flex items-baseline justify-between gap-4">
               <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
-              <a href={`/api/run/${run.id}/pdf`} target="_blank"
-                className="shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-1.5 hover:bg-[var(--accent)] hover:text-white transition-colors">
-                Client PDF
-              </a>
+              {run.status === "done" && (
+                <a href={`/api/run/${run.id}/pdf`} target="_blank"
+                  className="shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-1.5 hover:bg-[var(--accent)] hover:text-white transition-colors">
+                  Client PDF
+                </a>
+              )}
             </div>
-            <div className="mt-6 flex items-start gap-8 flex-wrap">
-              <div>
-                <span className="serif text-6xl text-[var(--ink)] leading-none">{s.overall ?? "—"}</span>
-                <span className="serif text-lg text-[var(--muted)]">/100</span>
-                <p className="mt-1.5 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">Overall health</p>
-              </div>
-              <div className="flex-1 min-w-56 pt-1.5">
-                <div className="flex gap-0.5 h-3">
-                  {BANDS.map((b) => (
-                    <span key={b} className="flex-1"
-                      style={{ background: b === s.band ? BAND_COLOR[b] : "var(--track)" }} />
-                  ))}
+            {run.status === "done" && (
+              <div className="mt-6 flex items-start gap-8 flex-wrap">
+                <div>
+                  <span className="serif text-6xl text-[var(--ink)] leading-none">{s.overall ?? "—"}</span>
+                  <span className="serif text-lg text-[var(--muted)]">/100</span>
+                  <p className="mt-1.5 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">Overall health</p>
                 </div>
-                <div className="flex mt-1.5">
-                  {BANDS.map((b) => (
-                    <span key={b} className="flex-1 text-center text-[9px] tracking-[.05em] uppercase"
-                      style={{ color: b === s.band ? BAND_COLOR[b] : "var(--faint)", fontWeight: b === s.band ? 600 : 400 }}>
-                      {b}
-                    </span>
-                  ))}
+                <div className="flex-1 min-w-56 pt-1.5">
+                  <div className="flex gap-0.5 h-3">
+                    {BANDS.map((b) => (
+                      <span key={b} className="flex-1"
+                        style={{ background: b === s.band ? BAND_COLOR[b] : "var(--track)" }} />
+                    ))}
+                  </div>
+                  <div className="flex mt-1.5">
+                    {BANDS.map((b) => (
+                      <span key={b} className="flex-1 text-center text-[9px] tracking-[.05em] uppercase"
+                        style={{ color: b === s.band ? BAND_COLOR[b] : "var(--faint)", fontWeight: b === s.band ? 600 : 400 }}>
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                  {s.design_pending && (
+                    <p className="mt-2 text-[11px] text-[var(--faint)]">
+                      Design &amp; Brand and Authority pending their integrations — their weight is redistributed. {s.coverage_note}.
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Areas */}
@@ -104,7 +132,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                     </span>
                     <span className="w-8 text-right text-sm text-[var(--ink)] tabular-nums">{a.score}</span>
                   </div>
-                  <p className="mt-1 text-[13px] pl-0">
+                  <p className="mt-1 text-[13px]">
                     <span style={{ color: STATUS_COLOR[a.status] ?? "var(--muted)" }} className="serif">{a.status}</span>
                     <span className="text-[var(--muted)]"> — {a.note}</span>
                   </p>
@@ -113,7 +141,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             </section>
           )}
 
-          {/* Design sub-scores */}
+          {/* Design sub-scores (fixture-era runs only, until stage 5) */}
           {subs.length > 0 && (
             <section className="px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-4">
@@ -169,40 +197,42 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
           )}
 
           {/* Findings */}
-          <section className="px-8 py-7">
-            <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-2">
-              Findings — {sorted.length}
-            </p>
-            {sorted.map((f) => (
-              <details key={f.id} className="border-t border-[var(--hair)] first:border-t-0 group">
-                <summary className="py-3.5 flex items-baseline gap-3 cursor-pointer list-none hover:bg-[var(--ground)] -mx-3 px-3">
-                  <span className="serif text-[13px] w-16 shrink-0" style={{ color: SEV_COLOR[f.severity] }}>
-                    {f.severity}
-                  </span>
-                  <span className="text-[var(--ink)] text-[15px] flex-1">{f.title}</span>
-                  <span className="text-[10px] text-[var(--faint)] uppercase tracking-wide shrink-0">
-                    {f.evidence_label.replaceAll("_", " ")}
-                  </span>
-                  <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
-                </summary>
-                <div className="pb-5 pl-[76px] pr-4 space-y-3 text-[13px]">
-                  {f.evidence && (
-                    <p className="font-mono text-[12px] bg-[var(--ground)] px-3 py-2 whitespace-pre-wrap">{f.evidence}</p>
-                  )}
-                  {f.internal_detail && (
-                    <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--muted)] block mb-0.5">Internal fix — never client-facing</span>{f.internal_detail}</p>
-                  )}
-                  {f.client_summary && (
-                    <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--accent)] block mb-0.5">Client wording</span>{f.client_summary}</p>
-                  )}
-                  <p className="text-[11px] text-[var(--faint)]">
-                    {f.check_id} · {f.category} · verified via {f.verification ?? "—"} · confidence {f.confidence} ·
-                    reach {f.reach ?? "—"} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · score impact {f.score_impact}
-                  </p>
-                </div>
-              </details>
-            ))}
-          </section>
+          {sorted.length > 0 && (
+            <section className="px-8 py-7">
+              <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-2">
+                Findings — {sorted.length}
+              </p>
+              {sorted.map((f) => (
+                <details key={f.id} className="border-t border-[var(--hair)] first:border-t-0 group">
+                  <summary className="py-3.5 flex items-baseline gap-3 cursor-pointer list-none hover:bg-[var(--ground)] -mx-3 px-3">
+                    <span className="serif text-[13px] w-16 shrink-0" style={{ color: SEV_COLOR[f.severity] }}>
+                      {f.severity}
+                    </span>
+                    <span className="text-[var(--ink)] text-[15px] flex-1">{f.title}</span>
+                    <span className="text-[10px] text-[var(--faint)] uppercase tracking-wide shrink-0">
+                      {f.evidence_label.replaceAll("_", " ")}
+                    </span>
+                    <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
+                  </summary>
+                  <div className="pb-5 pl-[76px] pr-4 space-y-3 text-[13px]">
+                    {f.evidence && (
+                      <p className="font-mono text-[12px] bg-[var(--ground)] px-3 py-2 whitespace-pre-wrap">{f.evidence}</p>
+                    )}
+                    {f.internal_detail && (
+                      <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--muted)] block mb-0.5">Internal fix — never client-facing</span>{f.internal_detail}</p>
+                    )}
+                    {f.client_summary && (
+                      <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--accent)] block mb-0.5">Client wording</span>{f.client_summary}</p>
+                    )}
+                    <p className="text-[11px] text-[var(--faint)]">
+                      {f.check_id} · {f.category} · verified via {f.verification ?? "—"} · confidence {f.confidence} ·
+                      reach {f.reach ?? "—"} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · score impact {f.score_impact}
+                    </p>
+                  </div>
+                </details>
+              ))}
+            </section>
+          )}
         </div>
       </div>
     </main>

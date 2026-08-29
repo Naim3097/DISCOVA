@@ -1,23 +1,16 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { startAudit } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 
 const BAND_COLOR: Record<string, string> = {
-  Critical: "var(--attn)",
-  Developing: "var(--improve)",
-  Fair: "var(--accent)",
-  Good: "var(--good)",
-  Excellent: "var(--good)",
+  Critical: "var(--attn)", Developing: "var(--improve)", Fair: "var(--accent)",
+  Good: "var(--good)", Excellent: "var(--good)",
 };
 
-const TIERS = [
-  { name: "Audit", copy: "The complete lean.X audit. Key pages, full check register, design review, client-ready PDF.", time: "~3 min" },
-  { name: "Investigation", copy: "The whole site. Crawls every page, finds the patterns and template-level causes behind the findings.", time: "~5 min" },
-  { name: "Intelligence", copy: "Adds the outside world. Performance field data, competitors you name, prioritised actions and a 30/60/90 plan.", time: "~15 min" },
-];
-
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
+  const { err } = await searchParams;
   const client = db();
 
   if (!client) {
@@ -25,14 +18,7 @@ export default async function Home() {
       <Shell>
         <div className="bg-[var(--paper)] px-8 py-10">
           <h2 className="serif text-xl text-[var(--ink)]">Database not connected</h2>
-          <p className="mt-3 text-sm">
-            Add the three Supabase values in Vercel → Settings → Environment Variables, then redeploy:
-          </p>
-          <ul className="mt-3 space-y-1 font-mono text-[13px]">
-            <li>NEXT_PUBLIC_SUPABASE_URL</li>
-            <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
-            <li>SUPABASE_SERVICE_ROLE_KEY</li>
-          </ul>
+          <p className="mt-3 text-sm">Add the Supabase values in Vercel → Environment Variables, then redeploy.</p>
         </div>
       </Shell>
     );
@@ -58,36 +44,60 @@ export default async function Home() {
         </span>
       </div>
 
-      {/* New analysis — honest placeholder until stage 4 */}
+      {/* New analysis */}
       <div className="bg-[var(--paper)] px-8 py-7 border-b border-[var(--hair)]">
         <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">New analysis</p>
-        <div className="mt-4">
-          {TIERS.map((t, i) => (
-            <div key={t.name} className={`flex items-baseline gap-4 py-3 ${i > 0 ? "border-t border-[var(--hair)]" : ""} opacity-45`}>
-              <span className="serif text-lg text-[var(--ink)] w-36 shrink-0">{t.name}</span>
-              <span className="text-sm flex-1">{t.copy}</span>
-              <span className="text-xs text-[var(--faint)] shrink-0">{t.time}</span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-[var(--faint)]">The engine connects at stage 4 — runs below are real audit data.</p>
+        {err && (
+          <p className="mt-3 text-sm text-[var(--attn)]">
+            {err === "worker" ? "WORKER_URL is not configured." : "The engine could not start that audit — check the domain and try again."}
+          </p>
+        )}
+        <form action={startAudit} className="mt-4">
+          <div className="flex gap-3">
+            <input
+              name="domain" required placeholder="example.com.my"
+              className="flex-1 border border-[var(--rule)] bg-transparent px-4 py-2.5 text-[15px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
+            />
+            <button
+              type="submit"
+              className="shrink-0 bg-[var(--accent)] text-white px-6 py-2.5 text-sm hover:opacity-90"
+            >
+              Run audit
+            </button>
+          </div>
+          <div className="mt-5">
+            <label className="flex items-baseline gap-4 py-3 cursor-pointer">
+              <input type="radio" name="tier" value="audit" defaultChecked className="translate-y-0.5 accent-[var(--accent)]" />
+              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Audit</span>
+              <span className="text-sm flex-1">The complete lean.X audit. Key pages, full check register, client-ready PDF.</span>
+              <span className="text-xs text-[var(--faint)] shrink-0">~2 min</span>
+            </label>
+            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] opacity-40">
+              <input type="radio" name="tier" value="investigation" disabled className="translate-y-0.5" />
+              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Investigation</span>
+              <span className="text-sm flex-1">The whole site — patterns and template-level causes. Arrives at stage 8.</span>
+              <span className="text-xs text-[var(--faint)] shrink-0">~5 min</span>
+            </label>
+            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] opacity-40">
+              <input type="radio" name="tier" value="intelligence" disabled className="translate-y-0.5" />
+              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Intelligence</span>
+              <span className="text-sm flex-1">External data, competitors, priorities and a 30/60/90 plan. Arrives at stage 9.</span>
+              <span className="text-xs text-[var(--faint)] shrink-0">~15 min</span>
+            </label>
+          </div>
+        </form>
       </div>
 
       {/* Runs */}
       <div className="bg-[var(--paper)] px-8 py-7">
         <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
         {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
-        {error && (
-          <p className="mt-1 text-[11px] text-[var(--faint)] break-all">
-            diag: url={process.env.NEXT_PUBLIC_SUPABASE_URL} · key={process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 12)}…
-            ({process.env.SUPABASE_SERVICE_ROLE_KEY?.length} chars)
-          </p>
-        )}
         {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
         <div className="mt-2">
           {runs?.map((r) => {
             const overall = r.scores?.overall as number | undefined;
             const band = r.scores?.band as string | undefined;
+            const running = !["done", "failed"].includes(r.status);
             return (
               <Link key={r.id} href={`/run/${r.id}`}
                 className="flex items-baseline gap-4 py-4 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3">
@@ -103,7 +113,10 @@ export default async function Home() {
                     <span className="text-xs" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>{band}</span>
                   </span>
                 ) : (
-                  <span className="w-32 shrink-0 text-right text-xs text-[var(--faint)]">{r.status}</span>
+                  <span className="w-32 shrink-0 text-right text-xs"
+                    style={{ color: running ? "var(--accent)" : "var(--attn)" }}>
+                    {running ? `${r.status}…` : r.status}
+                  </span>
                 )}
               </Link>
             );

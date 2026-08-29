@@ -5,8 +5,9 @@ import http from "node:http";
 import pg from "pg";
 import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
+import { runAudit } from "./analyze.js";
 
-const VERSION = "0.2.2-stage3";
+const VERSION = "0.3.0-stage4";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -87,6 +88,26 @@ function startServer() {
         res.end(pdf);
         return;
       }
+      if (u.pathname === "/analyze") {
+        const secret = process.env.WORKER_SECRET;
+        if (secret && req.headers["x-worker-secret"] !== secret) {
+          res.writeHead(401); res.end("unauthorized"); return;
+        }
+        if (!pool) { res.writeHead(503); res.end("no database"); return; }
+        const domain = (u.searchParams.get("domain") ?? "").trim().toLowerCase()
+          .replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
+          res.writeHead(400); res.end("valid domain required"); return;
+        }
+        const { rows: [run] } = await pool.query(
+          `insert into runs (domain, tier, framework_version, status)
+           values ($1, 'audit', '2.2', 'queued') returning id`, [domain]);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ id: run.id }));
+        processRun(run.id, domain).catch((e) =>
+          console.error(`[discova-worker] run ${run.id} crashed:`, e.message));
+        return;
+      }
       res.writeHead(404); res.end("not found");
     } catch (e) {
       console.error("[discova-worker] request failed:", e.message);
@@ -97,8 +118,50 @@ function startServer() {
   server.listen(PORT, () => console.log(`[discova-worker] http listening on :${PORT}`));
 }
 
+async function processRun(runId, domain) {
+  const setStatus = (st) => pool.query("update runs set status=$1 where id=$2", [st, runId]);
+  const log = (m) => console.log(`[discova-worker] run ${runId.slice(0, 8)} ${domain}: ${m}`);
+  try {
+    const { scores, findings } = await runAudit(domain, { onStatus: setStatus, log });
+    await setStatus("writing");
+    for (const f of findings) {
+      await pool.query(
+        `insert into findings (run_id, check_id, category, severity, title, evidence,
+           evidence_label, verification, confidence, reach, internal_detail, client_summary,
+           effort, score_impact)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [runId, f.check_id, f.category, f.severity, f.title, f.evidence ?? null,
+         f.evidence_label, f.verification ?? "none", f.confidence ?? 1.0, f.reach ?? null,
+         f.internal_detail ?? null, f.client_summary ?? null, f.effort ?? null,
+         f.score_impact ?? 0]);
+    }
+    await pool.query(
+      "update runs set status='done', finished_at=now(), scores=$1 where id=$2",
+      [JSON.stringify(scores), runId]);
+    log(`done — ${scores.overall}/100 ${scores.band}, ${findings.length} findings`);
+  } catch (e) {
+    console.error(`[discova-worker] run ${runId} failed:`, e);
+    await pool.query(
+      "update runs set status='failed', finished_at=now(), scores=$1 where id=$2",
+      [JSON.stringify({ error: e.message }), runId]).catch(() => {});
+  }
+}
+
 async function main() {
   console.log(`[discova-worker] ${VERSION} starting`);
+  const at = process.argv.indexOf("--analyze-test");
+  if (at !== -1) {
+    const domain = process.argv[at + 1];
+    const { writeFileSync } = await import("node:fs");
+    const { scores, findings } = await runAudit(domain, { onStatus: async () => {}, log: console.log });
+    writeFileSync("analyze-test.json", JSON.stringify({ scores, findings }, null, 2));
+    console.log(`
+=== ${domain} — ${scores.overall}/100 ${scores.band} (design pending) ===`);
+    for (const a of scores.areas) console.log(`  ${a.label.padEnd(22)} ${String(a.score).padStart(3)}  ${a.status}`);
+    console.log(`  findings: ${findings.length} → analyze-test.json`);
+    for (const f of findings) console.log(`   [${f.severity[0]}] ${f.check_id}: ${f.title}`);
+    return;
+  }
   if (pdfTest) {
     const { readFileSync, writeFileSync } = await import("node:fs");
     const fx = JSON.parse(readFileSync(new URL("./test-fixture.json", import.meta.url)));
