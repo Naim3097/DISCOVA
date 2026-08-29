@@ -26,5 +26,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip Next internals and any file with an extension (logo, favicon, fonts):
+  // the gate protects pages and data, not the artwork on the login screen.
+  matcher: ["/((?!_next/static|_next/image|.*\\..*).*)"],
 };
