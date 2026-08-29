@@ -324,7 +324,11 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     gapCandidates: gapCandidates(ctx),
   }).catch((e) => { log("writer unavailable: " + e.message); return null; });
 
-  if (narrative) {
+  if (narrative?.__error) {
+    scores.narrative_error = narrative.__error;
+    log("writer failed: " + narrative.__error);
+  }
+  if (narrative && !narrative.__error) {
     log("narrative written");
     scores.narrative = {
       lead: narrative.lead, sub: narrative.sub,

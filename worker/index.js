@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.5.0-stage6";
+const VERSION = "0.5.1-stage6";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -99,12 +99,18 @@ function startServer() {
         if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
           res.writeHead(400); res.end("valid domain required"); return;
         }
+        if (globalThis.__analyzing) {
+          res.writeHead(429, { "content-type": "text/plain" });
+          res.end("an analysis is already running; try again in a minute");
+          return;
+        }
         const { rows: [run] } = await pool.query(
           `insert into runs (domain, tier, framework_version, status)
            values ($1, 'audit', '2.2', 'queued') returning id`, [domain]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
-        processRun(run.id, domain).catch((e) =>
+        globalThis.__analyzing = true;
+        processRun(run.id, domain).finally(() => { globalThis.__analyzing = false; }).catch((e) =>
           console.error(`[discova-worker] run ${run.id} crashed:`, e.message));
         return;
       }
@@ -171,6 +177,14 @@ async function main() {
     return;
   }
   await beat();
+  if (pool) {
+    const { rowCount } = await pool.query(
+      `update runs set status='failed', finished_at=now(),
+         scores = coalesce(scores,'{}'::jsonb) || '{"error":"interrupted by a worker restart"}'::jsonb
+       where status not in ('done','failed') and started_at < now() - interval '15 minutes'`
+    ).catch(() => ({ rowCount: 0 }));
+    if (rowCount) console.log(`[discova-worker] swept ${rowCount} orphaned run(s)`);
+  }
   if (once) { if (pool) await pool.end(); return; }
   setInterval(() => beat().catch((e) => console.error("[discova-worker] beat failed:", e.message)), 30_000);
   startServer();

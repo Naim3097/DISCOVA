@@ -96,11 +96,11 @@ export async function writeNarrative(data) {
         continue;
       }
       console.error("[discova-worker] writer failed disclosure twice:", viol.join(", "));
-      return null;
+      return { __error: "disclosure: " + viol.join(",") };
     } catch (e) {
       if (attempt === 1) {
         console.error("[discova-worker] writer unavailable:", e.message);
-        return null;
+        return { __error: e.message };
       }
     }
   }
