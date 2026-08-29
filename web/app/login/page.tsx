@@ -10,14 +10,14 @@ export default async function LoginPage({
   const { err } = await searchParams;
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm flex flex-col items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/discova-logo.png" alt="DISCOVA" className="h-9 w-auto" />
-        <p className="mt-2 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">
+        <p className="mt-3 text-[10px] tracking-[.14em] uppercase text-[var(--muted)] text-center">
           powered by lean.X digital
         </p>
-        <div className="mt-3 border-t-2 border-[var(--ink)] bg-[var(--paper)] px-8 py-8">
-          <h1 className="serif text-2xl text-[var(--ink)]">Team access</h1>
+        <div className="mt-5 w-full border-t-2 border-[var(--ink)] bg-[var(--paper)] px-8 py-8">
+          <h1 className="serif text-2xl text-[var(--ink)] text-center">Team access</h1>
           <form action={signIn} className="mt-5">
             <input
               type="password" name="password" required autoFocus
