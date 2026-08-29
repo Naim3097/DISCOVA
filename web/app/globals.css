@@ -1,94 +1,136 @@
 @import "tailwindcss";
 
-/* DISCOVA instrument theme — dark ground, off-white type, one neon accent,
-   tactile depth. Matches the DISCOVA logomark (neon green on dark).
-   The client PDF is untouched by any of this: it keeps the lean.X print
-   standards and is rendered by the worker, not from these styles. */
+/* DISCOVA — off-white acid instrument.
+   Warm off-white ground, ink-black frames, one neon green, tactile
+   hard-shadow physics. Type: Space Grotesk (display + UI) and
+   IBM Plex Mono (labels, data, evidence) via next/font.
+   The client PDF is rendered by the worker and untouched by any of this. */
 
 :root {
-  --ground:  #0F120F;
-  --paper:   #171B17;
-  --ink:     #F2F1E9;
-  --body:    #C3C9BC;
-  --muted:   #8C948A;
-  --faint:   #646C62;
-  --rule:    #39413A;
-  --hair:    rgba(242, 241, 233, 0.09);
-  --track:   #0B0E0B;
+  --ground:  #EFEDE2;
+  --paper:   #F9F8F0;
+  --ink:     #161A0E;
+  --body:    #3B4130;
+  --muted:   #6F7461;
+  --faint:   #9A9E8C;
+  --rule:    #C9C7B4;
+  --hair:    #E1DFCE;
+  --track:   #E6E4D4;
   --fill:    #A8E60A;
-  --accent:  #A8E60A;
-  --attn:    #FF6D57;
-  --improve: #E9C34B;
-  --good:    #9BD40E;
+  --accent:  #5F8A00;
+  --attn:    #C2371B;
+  --improve: #9A6E08;
+  --good:    #587F00;
+  --neon:    #A8E60A;
+  --band:    #161A0E;
 }
 
 body {
   background:
-    radial-gradient(1100px 520px at 50% -140px, rgba(168, 230, 10, 0.05), transparent 60%),
-    linear-gradient(180deg, #121512, #0C0F0C);
+    radial-gradient(1200px 500px at 50% -160px, rgba(168, 230, 10, 0.10), transparent 55%),
+    var(--ground);
   min-height: 100vh;
   color: var(--body);
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), "Segoe UI", system-ui, sans-serif;
 }
 
-.serif { font-family: Georgia, "Times New Roman", serif; }
+/* Display class (kept name so no markup churn): now the geometric grotesk */
+.serif {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
 
-/* ---- Skeuomorphic layer (keyed to existing utility classes; no markup churn) ---- */
+/* Micro-labels, chips and data read as machine text */
+[class*="tracking-["],
+.font-mono,
+.tabular-nums {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
 
-/* The brand rule atop each page becomes the instrument's top edge */
+/* ---- Tactile layer (keyed to existing utility classes) ---- */
+
+/* Each page's framed block becomes a hard-edged plate */
 [class*="border-t-2"] {
-  border-radius: 0 0 4px 4px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 7px 7px 0 rgba(22, 26, 14, 0.85);
 }
 
-/* Panels: machined modules — top light edge, seated shadow */
-[class*="bg-[var(--paper)]"] {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(0, 0, 0, 0.14));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+/* The logomark always sits on its dark plate (white wordmark stays legible) */
+img[alt="DISCOVA"] {
+  background: var(--band);
+  padding: 7px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  box-shadow: 3px 3px 0 rgba(22, 26, 14, 0.85);
+  height: 44px !important;
 }
 
-/* Text inputs read as inset wells (radios and hidden inputs unaffected) */
+/* Text inputs: flat wells with hard shadows; neon focus */
 input:not([type]),
 input[type="text"],
 input[type="password"] {
-  background-color: #0b0e0b;
-  border-radius: 3px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--paper);
+  border: 2px solid var(--ink) !important;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 rgba(22, 26, 14, 0.2);
+  transition: box-shadow 0.12s, transform 0.12s;
 }
 input:not([type]):focus,
 input[type="text"]:focus,
 input[type="password"]:focus {
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--accent), 0 0 10px rgba(168, 230, 10, 0.25);
+  outline: none;
+  box-shadow: 3px 3px 0 var(--neon);
 }
 
-/* Neon controls: raised, machined, dark type on the lit surface */
+/* Neon controls: pressed-button physics */
 [class*="bg-[var(--accent)]"] {
-  color: #10140f !important;
-  font-weight: 600;
-  border-radius: 3px;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.1));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 5px rgba(0, 0, 0, 0.55), 0 0 14px rgba(168, 230, 10, 0.22);
+  background-color: var(--neon) !important;
+  color: var(--ink) !important;
+  font-weight: 700;
+  border: 2px solid var(--ink) !important;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+[class*="bg-[var(--accent)]"]:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
 }
 [class*="bg-[var(--accent)]"]:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.35);
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+[class*="hover:bg-[var(--accent)]"] {
+  border-radius: 6px;
 }
 [class*="hover:bg-[var(--accent)]"]:hover {
-  color: #10140f !important;
-  box-shadow: 0 0 14px rgba(168, 230, 10, 0.3);
+  background-color: var(--neon) !important;
+  color: var(--ink) !important;
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
-/* Score tracks are grooves; fills glow */
+/* Score tracks are grooves; fills are neon bricks */
 [class*="bg-[var(--track)]"] {
-  border-radius: 2px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.65), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.22);
 }
 [class*="bg-[var(--fill)]"] {
-  border-radius: 2px;
-  box-shadow: 0 0 9px rgba(168, 230, 10, 0.4);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.45);
 }
 
-/* Evidence blocks sit in a shallow well */
+/* Evidence blocks: shallow paper wells */
 [class*="bg-[var(--ground)]"] {
-  border-radius: 3px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.14);
+}
+
+/* Radios pick up the neon */
+input[type="radio"] {
+  accent-color: var(--neon);
+  width: 15px;
+  height: 15px;
 }
