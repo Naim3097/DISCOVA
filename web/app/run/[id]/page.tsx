@@ -87,6 +87,9 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                 </a>
               )}
             </div>
+            {run.status === "done" && s.narrative?.lead && (
+              <p className="serif italic text-[17px] text-[var(--ink)] mt-3 max-w-xl">{s.narrative.lead}</p>
+            )}
             {run.status === "done" && (
               <div className="mt-6 flex items-start gap-8 flex-wrap">
                 <div>
