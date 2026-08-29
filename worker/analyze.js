@@ -316,10 +316,12 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   };
   let invFindings = [], surveyPages = [];
   if (tier === "investigation") {
-    await onStatus("surveying");
+    // DB status vocabulary is fixed by a check constraint; the survey IS a
+    // site-wide crawl, so it reports as one (and each beat refreshes recovery).
+    await onStatus("crawling");
     const survey = await surveySite(ctx, {
       httpGet, log,
-      beat: () => Promise.resolve(onStatus("surveying")),
+      beat: () => Promise.resolve(onStatus("crawling")),
     }).catch((e) => { log("survey failed: " + e.message); return null; });
     if (survey) {
       scores.investigation = survey.summary;
