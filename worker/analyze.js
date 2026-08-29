@@ -6,6 +6,7 @@ import { designReview } from "./design.js";
 import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
 import { surveySite } from "./survey.js";
+import { intelligenceLayer, buildPriorities, buildPlan } from "./intelligence.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
@@ -264,7 +265,7 @@ async function render(base, log, rawBody) {
   return dom;
 }
 
-export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit" } = {}) {
+export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [] } = {}) {
   const ctx = { domain, probes: {}, dom: {} };
 
   await onStatus("crawling");
@@ -312,10 +313,10 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     design_pending: !design,
     checks_run: CHECKS.length,
     coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
-    engine: tier === "investigation" ? "investigation-v1" : "audit-v1",
+    engine: tier === "audit" ? "audit-v1" : `${tier}-v1`,
   };
   let invFindings = [], surveyPages = [];
-  if (tier === "investigation") {
+  if (tier !== "audit") {
     // DB status vocabulary is fixed by a check constraint; the survey IS a
     // site-wide crawl, so it reports as one (and each beat refreshes recovery).
     await onStatus("crawling");
@@ -330,6 +331,19 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     } else {
       scores.investigation = { error: "survey failed; score unaffected (fixed core)" };
     }
+  }
+
+  if (tier === "intelligence") {
+    await onStatus("crawling");
+    const { intel, findings: intelFindings } = await intelligenceLayer(ctx, {
+      competitors, httpGet, log,
+      beat: () => Promise.resolve(onStatus("crawling")),
+    }).catch((e) => { log("intelligence failed: " + e.message); return { intel: { error: e.message }, findings: [] }; });
+    invFindings.push(...intelFindings);
+    const priorities = buildPriorities([...findings, ...invFindings]);
+    intel.priorities = priorities;
+    intel.plan = buildPlan(priorities);
+    scores.intelligence = intel;
   }
 
   await onStatus("writing");

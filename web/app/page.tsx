@@ -78,12 +78,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
               <span className="text-sm flex-1">Everything in Audit, plus a site-wide crawl: the patterns and template-level causes behind the findings. Same score.</span>
               <span className="text-xs text-[var(--faint)] shrink-0">~5 min</span>
             </label>
-            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] opacity-40">
-              <input type="radio" name="tier" value="intelligence" disabled className="translate-y-0.5" />
+            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] cursor-pointer">
+              <input type="radio" name="tier" value="intelligence" className="translate-y-0.5 accent-[var(--accent)]" />
               <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Intelligence</span>
-              <span className="text-sm flex-1">External data, competitors, priorities and a 30/60/90 plan. Arrives at stage 9.</span>
-              <span className="text-xs text-[var(--faint)] shrink-0">~15 min</span>
+              <span className="text-sm flex-1">Everything in Investigation, plus Google&apos;s speed data, competitor comparison, priorities and an internal 30/60/90. Same score.</span>
+              <span className="text-xs text-[var(--faint)] shrink-0">~6 min</span>
             </label>
+            <div className="pt-2 pb-1 border-t border-[var(--hair)]">
+              <input
+                name="competitors"
+                placeholder="Competitors, up to 3, comma separated — Intelligence only (optional)"
+                className="w-full border border-[var(--rule)] bg-transparent px-4 py-2 text-[13px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
+              />
+            </div>
           </div>
         </form>
       </div>

@@ -263,6 +263,95 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             </section>
           )}
 
+          {/* Intelligence tier: external data + strategy (internal only) */}
+          {s.intelligence && (
+            <section className="px-8 py-7 border-b border-[var(--hair)]">
+              <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Intelligence</p>
+              <p className="text-[12px] text-[var(--faint)] mt-1 mb-4">
+                External data and strategy. Internal only — never client-facing. The score is unaffected.
+              </p>
+
+              {s.intelligence.psi?.pending ? (
+                <p className="text-[13px] text-[var(--muted)]">{s.intelligence.psi.note}.</p>
+              ) : s.intelligence.psi && (
+                <div className="text-[13px]">
+                  <span className="serif text-[15px] text-[var(--ink)]">Page speed</span>
+                  <span className="text-[var(--muted)]"> — Google PageSpeed, {s.intelligence.fetched_at}: </span>
+                  <span className="text-[var(--ink)] tabular-nums">
+                    mobile {s.intelligence.psi.mobile?.score ?? "—"}/100 · desktop {s.intelligence.psi.desktop?.score ?? "—"}/100
+                  </span>
+                  {s.intelligence.psi.field ? (
+                    <p className="mt-1 text-[var(--muted)]">
+                      Real Chrome visitors (28 days): overall{" "}
+                      <span style={{ color: s.intelligence.psi.field.overall === "FAST" ? "var(--good)" : s.intelligence.psi.field.overall === "SLOW" ? "var(--attn)" : "var(--improve)" }}>
+                        {s.intelligence.psi.field.overall}
+                      </span>
+                      {s.intelligence.psi.field.lcp_ms && <> · main content visible {(s.intelligence.psi.field.lcp_ms / 1000).toFixed(1)}s</>}
+                      {s.intelligence.psi.field.inp_ms && <> · reacts in {s.intelligence.psi.field.inp_ms}ms</>}
+                    </p>
+                  ) : s.intelligence.psi.field_note ? (
+                    <p className="mt-1 text-[var(--faint)]">{s.intelligence.psi.field_note}.</p>
+                  ) : null}
+                </div>
+              )}
+
+              {(s.intelligence.competitors ?? []).length > 0 && (
+                <div className="mt-5">
+                  <p className="serif text-[15px] text-[var(--ink)] mb-2">Against the competitors named</p>
+                  {[{ domain: run.domain, sitemap_pages: s.investigation?.pages_known ?? null, psi_mobile: s.intelligence.psi?.mobile?.score ?? null, self: true },
+                    ...s.intelligence.competitors].map((c: any, i: number) => (
+                    <div key={c.domain} className={`flex items-center gap-3 py-1.5 text-[13px] ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
+                      <span className={`flex-1 truncate ${c.self ? "font-semibold text-[var(--ink)]" : "text-[var(--ink)]"}`}>
+                        {c.domain}{c.self ? " (this site)" : ""}{c.reachable === false ? " — unreachable" : ""}
+                      </span>
+                      <span className="w-28 text-right tabular-nums text-[var(--muted)]">
+                        {c.sitemap_pages != null ? `${c.sitemap_pages} pages` : "no sitemap"}
+                      </span>
+                      <span className="w-24 text-right tabular-nums text-[var(--muted)]">
+                        {c.psi_mobile != null ? `${c.psi_mobile}/100 mobile` : "—"}
+                      </span>
+                    </div>
+                  ))}
+                  <p className="mt-1 text-[11px] text-[var(--faint)]">Pages = sitemap URL counts; this site&apos;s figure is discovered URLs.</p>
+                </div>
+              )}
+
+              {(s.intelligence.priorities ?? []).length > 0 && (
+                <div className="mt-5">
+                  <p className="serif text-[15px] text-[var(--ink)] mb-2">Priorities — v2.2 model</p>
+                  {(s.intelligence.priorities as any[]).map((p, i) => (
+                    <div key={p.check_id + i} className={`flex items-baseline gap-3 py-1.5 text-[13px] ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
+                      <span className="w-6 text-[var(--faint)] tabular-nums shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="serif w-16 shrink-0" style={{ color: SEV_COLOR[p.severity] }}>{p.severity}</span>
+                      <span className="text-[var(--ink)] flex-1">{p.title}{p.below_line && <span className="text-[var(--faint)]"> · below the line</span>}</span>
+                      <span className="tabular-nums text-[var(--muted)] shrink-0">{p.priority}</span>
+                    </div>
+                  ))}
+                  <p className="mt-1 text-[11px] text-[var(--faint)]">
+                    (Impact × Opportunity × Reach) ÷ Effort × Confidence. Critical items rank first regardless. Opportunity defaults to medium in v1.
+                  </p>
+                </div>
+              )}
+
+              {s.intelligence.plan && (
+                <div className="mt-5">
+                  <p className="serif text-[15px] text-[var(--ink)] mb-2">30 · 60 · 90 — internal delivery plan</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[["First 30 days", s.intelligence.plan.d30], ["Days 31–60", s.intelligence.plan.d60], ["Days 61–90", s.intelligence.plan.d90]].map(([label, items]: any) => (
+                      <div key={label}>
+                        <p className="text-[10px] tracking-[.12em] uppercase text-[var(--muted)] pb-1 border-b border-[var(--hair)]">{label}</p>
+                        {items.length === 0 && <p className="pt-1.5 text-[12px] text-[var(--faint)]">Nothing in this window.</p>}
+                        <ul className="pt-1.5 space-y-1">
+                          {items.map((t: string) => <li key={t} className="text-[12px] text-[var(--ink)]">{t}</li>)}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Findings */}
           {sorted.length > 0 && (
             <section className="px-8 py-7">

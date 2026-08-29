@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.7.2-stage8";
+const VERSION = "0.8.0-stage9";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -108,12 +108,16 @@ function startServer() {
           res.writeHead(400); res.end("valid domain required"); return;
         }
         const tier = u.searchParams.get("tier") ?? "audit";
-        if (!["audit", "investigation"].includes(tier)) {
+        if (!["audit", "investigation", "intelligence"].includes(tier)) {
           res.writeHead(400); res.end("tier not available yet"); return;
         }
+        const competitors = (u.searchParams.get("competitors") ?? "")
+          .split(",").map((c) => c.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+          .filter((c) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(c) && c !== domain).slice(0, 3);
         const { rows: [run] } = await pool.query(
-          `insert into runs (domain, tier, framework_version, status)
-           values ($1, $2, '2.2', 'queued') returning id`, [domain, tier]);
+          `insert into runs (domain, tier, framework_version, status, scores)
+           values ($1, $2, '2.2', 'queued', $3) returning id`,
+          [domain, tier, JSON.stringify(competitors.length ? { competitors_requested: competitors } : {})]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
         return;
@@ -128,13 +132,13 @@ function startServer() {
   server.listen(PORT, () => console.log(`[discova-worker] http listening on :${PORT}`));
 }
 
-async function processRun(runId, domain, tier = "audit") {
+async function processRun(runId, domain, tier = "audit", competitors = []) {
   const setStatus = (st) => pool.query(
     "update runs set status=$1, scores=jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text)) where id=$2",
     [st, runId]);
   const log = (m) => console.log(`[discova-worker] run ${runId.slice(0, 8)} ${domain}: ${m}`);
   try {
-    const { scores, findings, pages } = await runAudit(domain, { onStatus: setStatus, log, tier });
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: setStatus, log, tier, competitors });
     await setStatus("writing");
     for (const f of findings) {
       await pool.query(
@@ -190,12 +194,12 @@ async function queueLoop(n) {
           scores = jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text))
         where id = (select id from runs where status = 'queued'
                     order by started_at asc limit 1 for update skip locked)
-        returning id, domain, tier`);
+        returning id, domain, tier, scores`);
       if (!job) { await new Promise((r) => setTimeout(r, 3000)); continue; }
       console.log(`[discova-worker] queue worker ${n} claimed ${job.domain}`);
       await pool.query("delete from findings where run_id=$1", [job.id]);
       await pool.query("delete from pages where run_id=$1", [job.id]);
-      await processRun(job.id, job.domain, job.tier ?? "audit");
+      await processRun(job.id, job.domain, job.tier ?? "audit", job.scores?.competitors_requested ?? []);
     } catch (e) {
       console.error(`[discova-worker] queue worker ${n} error:`, e.message);
       await new Promise((r) => setTimeout(r, 5000));
@@ -211,7 +215,9 @@ async function main() {
     const { writeFileSync } = await import("node:fs");
     const tt = process.argv.indexOf("--tier");
     const tier = tt !== -1 ? process.argv[tt + 1] : "audit";
-    const { scores, findings, pages } = await runAudit(domain, { onStatus: async () => {}, log: console.log, tier });
+    const ct = process.argv.indexOf("--competitors");
+    const competitors = ct !== -1 ? process.argv[ct + 1].split(",") : [];
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: async () => {}, log: console.log, tier, competitors });
     writeFileSync("analyze-test.json", JSON.stringify({ scores, findings, pages }, null, 2));
     console.log(`
 === ${domain} — ${scores.overall}/100 ${scores.band}${scores.design_pending ? " (design pending)" : ` (design ${scores.design_total.points}/24)`} ===`);
