@@ -133,6 +133,13 @@ async function render(base, log, rawBody) {
         const f = cs(e).fontFamily.split(",")[0].replace(/["']/g, "").trim();
         if (f && e.textContent.trim()) fonts[f] = (fonts[f] || 0) + 1;
       });
+      const pal = {};
+      all.forEach((e) => {
+        const st = cs(e);
+        [st.color, st.backgroundColor].forEach((v) => {
+          if (v && v !== 'rgba(0, 0, 0, 0)') pal[v] = (pal[v] || 0) + 1;
+        });
+      });
       const dead = [...document.querySelectorAll('a[href="#"],a[href=""]')];
       const deadReal = dead.filter((a) => {
         const dt = a.getAttribute("data-toggle") || a.getAttribute("data-bs-toggle") || "";
@@ -168,6 +175,7 @@ async function render(base, log, rawBody) {
         emoji: count(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu),
         caps: all.filter((e) => cs(e).textTransform === "uppercase").length,
         fonts: Object.entries(fonts).sort((a, b) => b[1] - a[1]).slice(0, 6),
+        palette: Object.entries(pal).sort((a, b) => b[1] - a[1]).slice(0, 12),
         waLinks: wa,
         waPrefilledCount: wa.filter((h) => /[?&]text=/.test(h ?? "")).length,
         tel: document.querySelectorAll('a[href^="tel:"]').length,
