@@ -184,7 +184,7 @@ function detectPatterns(pages, { base, renderedWords }) {
   const out = [];
   const ok = pages.filter((p) => p.status === 200 && p.title !== undefined);
   const F = (f) => out.push({
-    evidence_label: "verified", verification: "site_survey", confidence: 1.0,
+    evidence_label: "verified", verification: "raw_html", confidence: 1.0,
     score_impact: 0, ...f,
   });
   const denom = `${ok.length} pages surveyed`;
