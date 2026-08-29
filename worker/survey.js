@@ -25,6 +25,12 @@ function normalise(href, base) {
   const baseHost = new URL(base).host.replace(/^www\./, "");
   if (u.host.replace(/^www\./, "") !== baseHost) return null;
   if (SKIP_EXT.test(u.pathname)) return null;
+  if (u.searchParams.has("add-to-cart") || u.searchParams.has("remove_item")) return null; // cart ACTIONS, not pages
+  for (const k of [...u.searchParams.keys()]) {
+    if (/^(utm_w+|fbclid|gclid|mc_cid|mc_eid|replytocom|orderby|rating_filter|min_price|max_price|filter_w+|add_to_wishlist)$/i.test(k)) {
+      u.searchParams.delete(k);
+    }
+  }
   u.hash = "";
   let path = u.pathname.replace(/\/{2,}/g, "/");
   if (path.length > 1) path = path.replace(/\/$/, "");
@@ -236,7 +242,7 @@ function detectPatterns(pages, { base, renderedWords }) {
       title: "Whole sections share one identical page title",
       evidence: dupClusters.slice(0, 3).map((c) => `${c.n} of ${c.of} pages on template ${c.tpl} are titled "${c.title.slice(0, 70)}"`).join(" · ") + asServed(),
       reach: "high", effort: "medium",
-      internal_detail: `Template-level title tags: ${dupClusters.map((c) => `${c.tpl} (${c.n}x "${c.title.slice(0, 60)}")`).join("; ")}. Generate per-page titles from the page's own subject in each template.`,
+      internal_detail: `Template-level title tags: ${dupClusters.slice(0, 4).map((c) => `${c.tpl} (${c.n}x "${c.title.slice(0, 60)}")`).join("; ")}${dupClusters.length > 4 ? ` (+${dupClusters.length - 4} more templates)` : ""}. Generate per-page titles from the page's own subject in each template.`,
       client_summary: `${total} pages introduce themselves to Google with the exact same name, so they compete with each other instead of each winning its own search.`,
     });
   }

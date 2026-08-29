@@ -49,30 +49,37 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   const gapMax = gap ? Math.max(gap.value_a, gap.value_b, 1) : 1;
 
   const findingRow = (f: any) => (
-    <details key={f.id} className="border-t border-[var(--hair)] first:border-t-0 group">
-      <summary className="py-3.5 flex items-baseline gap-3 cursor-pointer list-none hover:bg-[var(--ground)] -mx-3 px-3">
-        <span className="serif text-[13px] w-16 shrink-0" style={{ color: SEV_COLOR[f.severity] }}>
+    <details key={f.id} className="group border border-[var(--hair)] rounded-lg mb-2.5 overflow-hidden open:border-[var(--rule)]">
+      <summary className="px-4 py-3 flex items-center gap-3 cursor-pointer list-none hover:bg-[var(--ground)] group-open:bg-[var(--ground)]">
+        <span className="w-14 shrink-0 text-[11px] font-semibold" style={{ color: SEV_COLOR[f.severity] }}>
           {f.severity}
         </span>
-        <span className="text-[var(--ink)] text-[15px] flex-1">{f.title}</span>
-        <span className="text-[10px] text-[var(--faint)] uppercase tracking-wide shrink-0">
+        <span className="text-[var(--ink)] text-[14px] leading-snug flex-1">{f.title}</span>
+        <span className="text-[9px] text-[var(--faint)] uppercase tracking-wide shrink-0">
           {f.evidence_label.replaceAll("_", " ")}
         </span>
         <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
       </summary>
-      <div className="pb-5 pl-[76px] pr-4 space-y-3 text-[13px]">
+      <div className="px-4 pb-4 pt-3 pl-[68px] space-y-3.5 text-[13px] border-t border-[var(--hair)]">
         {f.evidence && (
-          <p className="font-mono text-[12px] bg-[var(--ground)] px-3 py-2 whitespace-pre-wrap">{f.evidence}</p>
+          <p className="font-mono text-[11.5px] leading-relaxed text-[var(--muted)] bg-[var(--ground)] px-3 py-2.5 rounded-md whitespace-pre-wrap break-words max-h-36 overflow-y-auto">
+            {f.evidence}
+          </p>
         )}
         {f.internal_detail && (
-          <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--muted)] block mb-0.5">Internal fix — never client-facing</span>{f.internal_detail}</p>
+          <div className="border-l-2 border-[var(--rule)] pl-3">
+            <p className="text-[9px] tracking-[.12em] uppercase text-[var(--faint)] mb-1">Internal fix · never client-facing</p>
+            <p className="leading-relaxed">{f.internal_detail}</p>
+          </div>
         )}
         {f.client_summary && (
-          <p><span className="text-[10px] tracking-[.1em] uppercase text-[var(--accent)] block mb-0.5">Client wording</span>{f.client_summary}</p>
+          <div className="border-l-2 border-[var(--fill)] pl-3">
+            <p className="text-[9px] tracking-[.12em] uppercase text-[var(--faint)] mb-1">Client wording</p>
+            <p className="leading-relaxed text-[var(--ink)]">{f.client_summary}</p>
+          </div>
         )}
-        <p className="text-[11px] text-[var(--faint)]">
-          {f.check_id} · {f.category} · verified via {f.verification ?? "—"} · confidence {f.confidence} ·
-          reach {f.reach ?? "—"} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · score impact {f.score_impact}
+        <p className="text-[10px] text-[var(--faint)] font-mono">
+          {f.check_id} · effort {f.effort?.replaceAll("_", " ") ?? "—"} · reach {f.reach ?? "—"}
         </p>
       </div>
     </details>

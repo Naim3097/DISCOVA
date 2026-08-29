@@ -119,32 +119,36 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             const running = !["done", "failed", "partial"].includes(r.status);
             return (
               <div key={r.id}
-                className="flex items-baseline gap-4 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3 group">
-                <Link href={`/run/${r.id}`} className="flex items-baseline gap-4 py-4 flex-1 min-w-0">
-                  <span className="serif text-lg text-[var(--ink)] flex-1 truncate">{r.domain}</span>
-                  <span className="text-xs text-[var(--faint)] w-28 shrink-0 capitalize">{r.tier}</span>
-                  <span className="text-xs text-[var(--faint)] w-28 shrink-0">
-                    {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                className="flex items-center gap-3 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3 group">
+                <Link href={`/run/${r.id}`} className="flex items-center gap-3 py-2.5 flex-1 min-w-0">
+                  <span className="text-[14px] font-medium text-[var(--ink)] flex-1 truncate">{r.domain}</span>
+                  <span className="hidden sm:block text-[9px] font-mono uppercase tracking-wider text-[var(--faint)] border border-[var(--rule)] rounded px-1.5 py-0.5 w-28 text-center shrink-0">
+                    {r.tier}
                   </span>
-                  {overall !== undefined ? (
-                    <span className="w-32 shrink-0 text-right">
-                      <span className="serif text-xl text-[var(--ink)]">{overall}</span>
-                      <span className="text-xs text-[var(--faint)]">/100</span>{" "}
-                      <span className="text-xs" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>
-                        {r.status === "partial" ? "partial" : band}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="w-32 shrink-0 text-right text-xs"
-                      style={{ color: running ? "var(--accent)" : "var(--attn)" }}>
-                      {running ? `${r.status}…` : r.status}
-                    </span>
-                  )}
+                  <span className="text-[11px] font-mono text-[var(--faint)] w-24 text-right shrink-0">
+                    {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{" · "}
+                    {new Date(r.started_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="w-28 text-right shrink-0 text-[13px]">
+                    {overall !== undefined ? (
+                      <>
+                        <span className="font-semibold text-[15px] text-[var(--ink)] tabular-nums">{overall}</span>
+                        <span className="text-[10px] text-[var(--faint)]">/100</span>{" "}
+                        <span className="text-[10px]" style={{ color: BAND_COLOR[band ?? ""] ?? "var(--muted)" }}>
+                          {r.status === "partial" ? "partial" : band}
+                        </span>
+                      </>
+                    ) : running ? (
+                      <span className="text-[11px] font-mono text-[var(--accent)] animate-pulse">{r.status}…</span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-[var(--attn)]">{r.status}</span>
+                    )}
+                  </span>
                 </Link>
                 <form action={deleteRun} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <input type="hidden" name="id" value={r.id} />
                   <button type="submit" title="Delete this run and its findings"
-                    className="text-[var(--faint)] hover:text-[var(--attn)] text-sm px-1.5 py-3">
+                    className="text-[var(--faint)] hover:text-[var(--attn)] text-sm px-1.5 py-2">
                     ✕
                   </button>
                 </form>

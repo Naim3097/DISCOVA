@@ -86,7 +86,7 @@ input[type="password"]:focus {
 }
 
 /* Neon controls: pressed-button physics */
-[class*="bg-[var(--accent)]"] {
+[class^="bg-[var(--accent)]"], [class*=" bg-[var(--accent)]"] {
   background-color: var(--neon) !important;
   color: var(--ink) !important;
   font-weight: 700;
@@ -95,11 +95,11 @@ input[type="password"]:focus {
   box-shadow: 4px 4px 0 var(--ink);
   transition: transform 0.1s, box-shadow 0.1s;
 }
-[class*="bg-[var(--accent)]"]:hover {
+[class^="bg-[var(--accent)]"]:hover, [class*=" bg-[var(--accent)]"]:hover {
   transform: translate(-1px, -1px);
   box-shadow: 5px 5px 0 var(--ink);
 }
-[class*="bg-[var(--accent)]"]:active {
+[class^="bg-[var(--accent)]"]:active, [class*=" bg-[var(--accent)]"]:active {
   transform: translate(3px, 3px);
   box-shadow: 1px 1px 0 var(--ink);
 }
@@ -113,17 +113,17 @@ input[type="password"]:focus {
 }
 
 /* Score tracks are grooves; fills are neon bricks */
-[class*="bg-[var(--track)]"] {
+[class^="bg-[var(--track)]"], [class*=" bg-[var(--track)]"] {
   border-radius: 3px;
   box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.22);
 }
-[class*="bg-[var(--fill)]"] {
+[class^="bg-[var(--fill)]"], [class*=" bg-[var(--fill)]"] {
   border-radius: 3px;
   box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.45);
 }
 
 /* Evidence blocks: shallow paper wells */
-[class*="bg-[var(--ground)]"] {
+[class^="bg-[var(--ground)]"], [class*=" bg-[var(--ground)]"] {
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px rgba(22, 26, 14, 0.14);
 }
