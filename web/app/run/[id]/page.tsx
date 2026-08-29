@@ -59,7 +59,13 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         <div className="border-t-2 border-[var(--ink)] bg-[var(--paper)]">
           {/* Title + overall */}
           <div className="px-8 pt-8 pb-7 border-b border-[var(--hair)]">
-            <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
+            <div className="flex items-baseline justify-between gap-4">
+              <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
+              <a href={`/api/run/${run.id}/pdf`} target="_blank"
+                className="shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-1.5 hover:bg-[var(--accent)] hover:text-white transition-colors">
+                Client PDF
+              </a>
+            </div>
             <div className="mt-6 flex items-start gap-8 flex-wrap">
               <div>
                 <span className="serif text-6xl text-[var(--ink)] leading-none">{s.overall ?? "—"}</span>
