@@ -48,7 +48,7 @@ Write JSON ONLY, exactly this shape:
   "area_notes": { ${data.areas.map((a) => `"${a.key}": "one sentence of business consequence for ${a.label}, max 18 words"`).join(", ")} },
   "gap_index": ${data.gapCandidates.length ? "0-based index of the chosen candidate, or null" : "null"},
   "gap_note": "if gap chosen: one or two sentences explaining why that gap costs them, max 40 words; else null",
-  "closing_strong": "Opening clause of the close in bold, max 8 words, e.g. 'Nothing here is broken.'",
+  "closing_strong": "Opening clause of the close in bold, max 8 words. Write a fresh verdict specific to this site; never reuse a stock phrase.",
   "closing_rest": "Two sentences completing the close: what is salvageable and what is at stake. Max 55 words.",
   "next_step": "One sentence recommending the engagement, starting with the offer not the problem. Max 30 words."
 }`;
