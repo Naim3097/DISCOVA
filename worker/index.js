@@ -232,3 +232,4 @@ async function main() {
 
 process.on("SIGTERM", () => process.exit(0));
 main().catch((e) => { console.error("[discova-worker] fatal:", e.message); process.exit(1); });
+
