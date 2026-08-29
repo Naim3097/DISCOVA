@@ -80,10 +80,15 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   return (
     <main className="min-h-screen px-6 py-10">
       <div className="max-w-3xl mx-auto">
-        <header className="flex items-baseline justify-between pb-3">
-          <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
-            <Link href="/" className="text-[var(--ink)] font-semibold hover:underline">DISCOVA</Link>
-            <span className="mx-1.5 text-[var(--rule)]">·</span>powered by lean.X digital
+        <header className="flex items-center justify-between pb-4">
+          <span className="flex items-center gap-3">
+            <Link href="/" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/discova-logo.png" alt="DISCOVA" className="h-8 w-auto" />
+            </Link>
+            <span className="text-[10px] tracking-[.14em] uppercase text-[var(--muted)] pt-1.5">
+              powered by lean.X digital
+            </span>
           </span>
           <span className="text-[11px] text-[var(--faint)]">
             {run.tier} · framework v{run.framework_version} ·{" "}

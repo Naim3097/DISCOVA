@@ -157,10 +157,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen px-6 py-10">
       <div className="max-w-3xl mx-auto">
-        <header className="flex items-baseline justify-between pb-3">
-          <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
-            <span className="text-[var(--ink)] font-semibold">DISCOVA</span>
-            <span className="mx-1.5 text-[var(--rule)]">·</span>powered by lean.X digital
+        <header className="flex items-center justify-between pb-4">
+          <span className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/discova-logo.png" alt="DISCOVA" className="h-8 w-auto" />
+            <span className="text-[10px] tracking-[.14em] uppercase text-[var(--muted)] pt-1.5">
+              powered by lean.X digital
+            </span>
           </span>
           <span className="text-[11px] text-[var(--faint)] flex items-baseline gap-3">
             internal

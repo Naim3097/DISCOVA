@@ -11,9 +11,10 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
-          <span className="text-[var(--ink)] font-semibold">DISCOVA</span>
-          <span className="mx-1.5 text-[var(--rule)]">·</span>powered by lean.X digital
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/discova-logo.png" alt="DISCOVA" className="h-9 w-auto" />
+        <p className="mt-2 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">
+          powered by lean.X digital
         </p>
         <div className="mt-3 border-t-2 border-[var(--ink)] bg-[var(--paper)] px-8 py-8">
           <h1 className="serif text-2xl text-[var(--ink)]">Team access</h1>
