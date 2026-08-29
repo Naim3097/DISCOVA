@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.5.5-stage6";
+const VERSION = "0.6.0-stage7";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -107,19 +107,11 @@ function startServer() {
         if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
           res.writeHead(400); res.end("valid domain required"); return;
         }
-        if (globalThis.__analyzing) {
-          res.writeHead(429, { "content-type": "text/plain" });
-          res.end("an analysis is already running; try again in a minute");
-          return;
-        }
         const { rows: [run] } = await pool.query(
           `insert into runs (domain, tier, framework_version, status)
            values ($1, 'audit', '2.2', 'queued') returning id`, [domain]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
-        globalThis.__analyzing = true;
-        processRun(run.id, domain).finally(() => { globalThis.__analyzing = false; }).catch((e) =>
-          console.error(`[discova-worker] run ${run.id} crashed:`, e.message));
         return;
       }
       res.writeHead(404); res.end("not found");
@@ -161,6 +153,25 @@ async function processRun(runId, domain) {
   }
 }
 
+async function queueLoop(n) {
+  console.log(`[discova-worker] queue worker ${n} started`);
+  for (;;) {
+    try {
+      const { rows: [job] } = await pool.query(`
+        update runs set status = 'crawling'
+        where id = (select id from runs where status = 'queued'
+                    order by started_at asc limit 1 for update skip locked)
+        returning id, domain`);
+      if (!job) { await new Promise((r) => setTimeout(r, 3000)); continue; }
+      console.log(`[discova-worker] queue worker ${n} claimed ${job.domain}`);
+      await processRun(job.id, job.domain);
+    } catch (e) {
+      console.error(`[discova-worker] queue worker ${n} error:`, e.message);
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
+}
+
 async function main() {
   console.log(`[discova-worker] ${VERSION} starting`);
   const at = process.argv.indexOf("--analyze-test");
@@ -186,16 +197,30 @@ async function main() {
   }
   await beat();
   if (pool) {
-    const { rowCount } = await pool.query(
-      `update runs set status='failed', finished_at=now(),
-         scores = coalesce(scores,'{}'::jsonb) || '{"error":"interrupted by a worker restart"}'::jsonb
-       where status not in ('done','failed') and started_at < now() - interval '15 minutes'`
-    ).catch(() => ({ rowCount: 0 }));
-    if (rowCount) console.log(`[discova-worker] swept ${rowCount} orphaned run(s)`);
+    // Runs the previous process died holding go back to the queue (max 2 retries).
+    await pool.query(`
+      update runs set
+        scores = jsonb_set(coalesce(scores,'{}'::jsonb), '{requeues}',
+                 to_jsonb(coalesce((scores->>'requeues')::int, 0) + 1)),
+        status = case when coalesce((scores->>'requeues')::int, 0) >= 2
+                      then 'failed' else 'queued' end,
+        finished_at = case when coalesce((scores->>'requeues')::int, 0) >= 2
+                      then now() else null end
+      where status in ('crawling','checking','verifying','scoring','writing')`
+    ).then(r => { if (r.rowCount) console.log(`[discova-worker] recovered ${r.rowCount} in-flight run(s)`); })
+     .catch(() => {});
+    await pool.query(`
+      update runs set scores = scores || '{"error":"interrupted repeatedly by worker restarts"}'::jsonb
+      where status = 'failed' and (scores->>'requeues')::int >= 3 and scores->>'error' is null`
+    ).catch(() => {});
   }
   if (once) { if (pool) await pool.end(); return; }
   setInterval(() => beat().catch((e) => console.error("[discova-worker] beat failed:", e.message)), 30_000);
   startServer();
+  if (pool) {
+    const workers = Math.max(1, Number(process.env.WORKER_CONCURRENCY ?? 1));
+    for (let w = 1; w <= workers; w++) queueLoop(w);
+  }
 }
 
 process.on("SIGTERM", () => process.exit(0));
