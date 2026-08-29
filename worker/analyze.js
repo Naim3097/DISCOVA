@@ -3,6 +3,7 @@
 import { chromium } from "playwright";
 import { CHECKS, collectStrengths } from "./checks.js";
 import { designReview } from "./design.js";
+import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
@@ -312,5 +313,33 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
     engine: "audit-v1",
   };
+  await onStatus("writing");
+  const narrative = await writeNarrative({
+    domain,
+    overall, band, areas, strengths,
+    findings: findings.map((f) => ({
+      severity: f.severity, category: f.category, title: f.title, client_summary: f.client_summary,
+    })),
+    design,
+    gapCandidates: gapCandidates(ctx),
+  }).catch((e) => { log("writer unavailable: " + e.message); return null; });
+
+  if (narrative) {
+    log("narrative written");
+    scores.narrative = {
+      lead: narrative.lead, sub: narrative.sub,
+      closing_strong: narrative.closing_strong, closing_rest: narrative.closing_rest,
+      next_step: narrative.next_step,
+    };
+    for (const area of scores.areas) {
+      const n = narrative.area_notes?.[area.key];
+      if (n && n.length > 12) area.note = n;
+    }
+    const cands = gapCandidates(ctx);
+    if (narrative.gap_index != null && cands[narrative.gap_index]) {
+      scores.clearest_gap = { ...cands[narrative.gap_index], note: narrative.gap_note ?? "" };
+    }
+  }
+
   return { scores, findings, ctx };
 }

@@ -144,6 +144,10 @@ export function buildReportHtml(run, findings) {
   .rec .n { font-family:var(--serif); font-size:11.5pt; color:var(--accent); font-variant-numeric:tabular-nums; }
   .rec h3 { font-size:10.4pt; margin-bottom:.6mm; }
   .rec p { font-size:8.8pt; }
+  .closing strong { color:var(--ink); font-weight:600; }
+  .closing p { font-size:9pt; }
+  .nextstep { margin-top:3.4mm; padding-top:2.4mm; border-top:.6pt solid var(--rule); }
+  .nextstep .k { font-family:var(--serif); font-style:italic; font-size:10.2pt; color:var(--ink); }
   .colophon { margin-top:6mm; padding-top:2.2mm; border-top:.5pt solid var(--hair);
     font-size:7pt; line-height:1.4; color:var(--muted); }
   .pbreak { break-before:page; page-break-before:always; }
@@ -165,7 +169,8 @@ export function buildReportHtml(run, findings) {
   <div class="fig"><span class="n">${s.overall ?? "—"}</span><span class="sc">/100</span>
     <span class="cap">Overall health</span></div>
   <div class="right">
-    <p class="lead">${esc(BAND_LEAD[s.band] ?? "")}</p>
+    <p class="lead">${esc(s.narrative?.lead ?? BAND_LEAD[s.band] ?? "")}</p>
+    ${s.narrative?.sub ? `<p style="margin-top:2mm; font-size:8.8pt;">${esc(s.narrative.sub)}</p>` : ""}
     <div class="scale">
       <div class="bands">${BANDS.map((b) =>
         `<span${b === s.band ? ` style="background:${BAND_COLOR[b]}"` : ""}></span>`).join("")}</div>
@@ -198,6 +203,12 @@ ${(s.strengths ?? []).length ? `<h2 class="sec">What is working</h2>
 
 <h2 class="sec">Our priority recommendations</h2>
 ${recs.map(recRow).join("")}
+
+${s.narrative ? `<h2 class="sec">What this means</h2>
+<div class="closing">
+  <p><strong>${esc(s.narrative.closing_strong)}</strong> ${esc(s.narrative.closing_rest)}</p>
+  <div class="nextstep"><p><span class="k">Recommended next step.</span> ${esc(s.narrative.next_step)}</p></div>
+</div>` : ""}
 
 <div class="colophon">
   DISCOVA · powered by lean.X digital — Website Visibility Check for ${esc(run.domain)},
