@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.5.2-stage6";
+const VERSION = "0.5.3-stage6";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -86,6 +86,14 @@ function startServer() {
           "x-discova-pages": String(pages ?? "unknown"),
         });
         res.end(pdf);
+        return;
+      }
+      if (u.pathname === "/run-scores") {
+        if (!pool) { res.writeHead(503); res.end("no database"); return; }
+        const rid = u.searchParams.get("runId");
+        const { rows: [row] } = await pool.query("select domain, status, scores from runs where id=$1", [rid]);
+        res.writeHead(row ? 200 : 404, { "content-type": "application/json" });
+        res.end(JSON.stringify(row ?? { error: "not found" }));
         return;
       }
       if (u.pathname === "/analyze") {
