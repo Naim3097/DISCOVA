@@ -68,7 +68,15 @@ export function deterministicCriteria(dom) {
     colored += ct;
   }
   const hueGroups = Object.entries(hueUses).sort((a, b) => b[1] - a[1]);
-  const domShare = colored ? (hueGroups[0]?.[1] ?? 0) / colored : 0;
+  // Adjacent hues (within 30°) are one colour family — navy+teal reads as one identity.
+  let domShare = 0;
+  for (const [bStr, ct] of hueGroups) {
+    const b = +bStr;
+    const family = ct
+      + (hueUses[(b + 30) % 360] ?? 0)
+      + (hueUses[(b - 30 + 360) % 360] ?? 0);
+    domShare = Math.max(domShare, colored ? family / colored : 0);
+  }
   c.c10 = domShare >= 0.45 ? note(1, "One clearly dominant brand colour")
     : domShare >= 0.25 ? { met: 0.5, note: "A leading colour exists but does not dominate" }
     : { met: 0, note: "No colour leads — nothing for a visitor to remember" };
