@@ -7,3 +7,4 @@ node_modules/
 *.local
 .DS_Store
 worker/test-report.pdf
+worker/analyze-test.json

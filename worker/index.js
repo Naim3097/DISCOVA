@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.3.0-stage4";
+const VERSION = "0.4.0-stage5";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -156,7 +156,7 @@ async function main() {
     const { scores, findings } = await runAudit(domain, { onStatus: async () => {}, log: console.log });
     writeFileSync("analyze-test.json", JSON.stringify({ scores, findings }, null, 2));
     console.log(`
-=== ${domain} — ${scores.overall}/100 ${scores.band} (design pending) ===`);
+=== ${domain} — ${scores.overall}/100 ${scores.band}${scores.design_pending ? " (design pending)" : ` (design ${scores.design_total.points}/24)`} ===`);
     for (const a of scores.areas) console.log(`  ${a.label.padEnd(22)} ${String(a.score).padStart(3)}  ${a.status}`);
     console.log(`  findings: ${findings.length} → analyze-test.json`);
     for (const f of findings) console.log(`   [${f.severity[0]}] ${f.check_id}: ${f.title}`);

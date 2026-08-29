@@ -2,6 +2,7 @@
 // crawl (raw + rendered) → checks → verify → score → write.
 import { chromium } from "playwright";
 import { CHECKS, collectStrengths } from "./checks.js";
+import { designReview } from "./design.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
@@ -187,6 +188,20 @@ async function render(base, log, rawBody) {
         phoneLike: /(\+?6?0?1\d[\s-]?\d{3,4}[\s-]?\d{4})|(\b0[2-9]\d?[\s-]?\d{6,8}\b)/.test(text),
         emailLike: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(text),
         bodySample: text.slice(0, 4000),
+        capsButtons: [...document.querySelectorAll('button, a')].filter((b) => {
+          const t = b.textContent.trim();
+          return t.length > 3 && t === t.toUpperCase() && /[A-Z]{3}/.test(t) && b.getBoundingClientRect().width > 40;
+        }).length,
+        btnClassVariants: [...new Set([...document.querySelectorAll('button,[class*=btn],[class*=button]')].map((b) => (b.className||'').toString().trim()).filter(Boolean))].length,
+        cardClassVariants: [...new Set([...document.querySelectorAll('[class*=card]')].map((c) => (c.className||'').toString().split(' ')[0]))].length,
+        heroCtaCount: [...document.querySelectorAll('a,button')].filter((b) => {
+          const r = b.getBoundingClientRect();
+          const cl = (b.className||'').toString();
+          return r.top >= 0 && r.top < 850 && r.width > 60 && (/btn|button|cta/i.test(cl) || b.tagName === 'BUTTON');
+        }).length,
+        rawUrlTextCount: (text.match(/(https?:\/\/|wa\.me\/)[^\s]{4,}/g) || []).length,
+        stuckCounters: [...document.querySelectorAll('[class*=count], [data-target], [data-to]')].filter((e) => e.textContent.trim() === '0').length,
+        strokes: all.filter((e) => { const v = cs(e).webkitTextStrokeWidth; return v && v !== '0px'; }).length,
         langMix: {
           malay: count(/\b(dan|untuk|anda|kami|yang|dengan|adalah|atau)\b/gi),
           english: count(/\b(the|and|for|with|your|our|are|from)\b/gi),
@@ -207,6 +222,28 @@ async function render(base, log, rawBody) {
       if (/images?-?\d+\.(jpe?g|png)|Screenshot[\s_-]|download\.(png|jpe?g)/i.test(i.src)) stats.genericNamed++;
     }
     dom.imgStats = stats;
+
+    try {
+      await page.setViewportSize({ width: 1280, height: 2400 });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      dom.screenshotB64 = (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64');
+    } catch (e) { log('screenshot failed: ' + e.message); }
+
+    dom.keyImages = [];
+    const picks = (dom.imgs ?? [])
+      .filter((i) => i.natural[0] >= 200 && i.displayed[0] >= 120 && /^https?:/.test(i.src))
+      .sort((x, y) => y.displayed[0] * y.displayed[1] - x.displayed[0] * x.displayed[1])
+      .slice(0, 3);
+    for (const pick of picks) {
+      try {
+        const r = await fetch(pick.src, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(15000) });
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length > 20_000_000) continue;
+        const ct = r.headers.get('content-type') ?? '';
+        const media = /png/.test(ct) ? 'image/png' : /webp/.test(ct) ? 'image/webp' : /gif/.test(ct) ? 'image/gif' : 'image/jpeg';
+        dom.keyImages.push({ src: pick.src.slice(0, 120), alt: pick.alt, media, b64: buf.toString('base64') });
+      } catch { /* skip unfetchable image */ }
+    }
 
     const mob = await browser.newPage({ userAgent: UA, viewport: { width: 375, height: 812 } });
     await mob.goto(`${base}/`, { waitUntil: "load", timeout: 30000 }).catch(() => {});
@@ -243,16 +280,26 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log 
     }
   }
 
+  await onStatus("verifying");
+  const design = await designReview(
+    ctx.dom,
+    `${ctx.dom.title ?? domain} — ${ctx.dom.metaDesc ?? ""}`.slice(0, 220)
+  ).catch((e) => { log("design review unavailable: " + e.message); return null; });
+  if (design) log(`design review: ${design.points}/24`);
+  else log("design review pending (no vision available)");
+
   await onStatus("scoring");
-  const pendingCats = [CATS.D, CATS.A]; // design completes at stage 5; authority needs the backlink integration
-  const { catScores, overall, band } = scoreRun(findings, { pendingCats });
+  const pendingCats = design ? [CATS.A] : [CATS.D, CATS.A];
+  const injected = design ? { [CATS.D]: design.score } : {};
+  const { catScores, overall, band } = scoreRun(findings, { pendingCats, injected });
   const areas = rollUp(catScores, findings, { pendingCats });
   const strengths = collectStrengths(ctx);
 
   const scores = {
     overall, band, areas, strengths,
+    ...(design ? { design_subscores: design.subscores, design_total: { points: design.points, max: design.max } } : {}),
     cat_scores: catScores,
-    design_pending: true,
+    design_pending: !design,
     checks_run: CHECKS.length,
     coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
     engine: "audit-v1",

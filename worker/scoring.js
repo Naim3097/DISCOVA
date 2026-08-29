@@ -41,10 +41,11 @@ function bandFor(score, table) {
 // findings: [{category, severity, score_impact, title, client_summary, evidence_label}]
 // pendingCats: categories not yet assessable (e.g. Design until stage 5) —
 // their weight is redistributed proportionally per framework §6.3.
-export function scoreRun(findings, { pendingCats = [] } = {}) {
+export function scoreRun(findings, { pendingCats = [], injected = {} } = {}) {
   const catScores = {};
   for (const cat of Object.values(CATS)) {
     if (pendingCats.includes(cat)) continue;
+    if (injected[cat] != null) { catScores[cat] = injected[cat]; continue; }
     let s = 100;
     for (const f of findings) {
       if (f.category === cat && f.score_impact) s += f.score_impact;
