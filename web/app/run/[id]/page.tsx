@@ -132,12 +132,12 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Title + overall */}
           <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-7 border-b border-[var(--hair)]">
-            <div className="flex items-baseline justify-between gap-4">
-              <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h1 className="serif text-2xl sm:text-3xl text-[var(--ink)] break-all">{run.domain}</h1>
               {settled && (
-                <a href={`/api/run/${run.id}/pdf`} target="_blank"
-                  className="shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-1.5 hover:bg-[var(--accent)] hover:text-white transition-colors">
-                  Client PDF
+                <a href={`/api/run/${run.id}/pdf`} download
+                  className="w-full sm:w-auto text-center shrink-0 text-sm text-[var(--accent)] border border-[var(--accent)] px-4 py-2 hover:bg-[var(--accent)] hover:text-white transition-colors">
+                  Download client PDF
                 </a>
               )}
             </div>

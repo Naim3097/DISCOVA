@@ -17,10 +17,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!upstream.ok) {
     return new Response(`Worker error (${upstream.status}): ${await upstream.text()}`, { status: 502 });
   }
+  // One click = the file saves, on phone and desktop alike.
+  const upstreamDisp = upstream.headers.get("content-disposition") ?? "";
+  const filename = upstreamDisp.match(/filename="([^"]+)"/)?.[1] ?? "Visibility-Check.pdf";
   return new Response(upstream.body, {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": upstream.headers.get("content-disposition") ?? "inline",
+      "content-disposition": `attachment; filename="${filename}"`,
       "x-discova-pages": upstream.headers.get("x-discova-pages") ?? "",
     },
   });
