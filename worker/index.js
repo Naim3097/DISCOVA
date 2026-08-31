@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.10.1-accuracy";
+const VERSION = "0.10.2-accuracy";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -124,6 +124,21 @@ function startServer() {
           [domain, tier, JSON.stringify(competitors.length ? { competitors_requested: competitors } : {})]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
+        return;
+      }
+      if (u.pathname === "/admin/purge-runs" && req.method === "POST") {
+        const secret = process.env.WORKER_SECRET;
+        if (secret && req.headers["x-worker-secret"] !== secret) {
+          res.writeHead(401); res.end("unauthorized"); return;
+        }
+        if (!pool) { res.writeHead(503); res.end("no database"); return; }
+        if (u.searchParams.get("confirm") !== "delete-everything") {
+          res.writeHead(400); res.end("pass ?confirm=delete-everything"); return;
+        }
+        const { rowCount } = await pool.query("delete from runs");
+        console.log(`[discova-worker] purge: ${rowCount} runs deleted (findings and pages cascade)`);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ deleted_runs: rowCount }));
         return;
       }
       res.writeHead(404); res.end("not found");
