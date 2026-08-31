@@ -47,8 +47,9 @@ export const CHECKS = [
   },
   {
     id: "tech-robots",
+    // A network failure (code 0/5xx) is "could not verify", never "missing".
     run: (c) =>
-      c.probes.robots?.code !== 200
+      [404, 410, 403].includes(c.probes.robots?.code)
         ? F({
             category: CATS.T, severity: "high",
             title: "No robots.txt file",
@@ -319,7 +320,7 @@ export const CHECKS = [
     run: (c) =>
       (c.dom.words ?? 0) < 250
         ? F({
-            category: CATS.C, severity: "high",
+            category: CATS.C, severity: (c.dom.words ?? 0) < 100 ? "critical" : "high",
             title: `The homepage carries only ${c.dom.words} words`,
             evidence: `${c.dom.words} words of rendered text`,
             verification: "rendered_dom",
@@ -672,6 +673,58 @@ export const CHECKS = [
             internal_detail: "Consolidate to one heading face + one body face.",
             client_summary: "Several different typefaces compete on the page where a deliberate pair would read as designed.",
             score_zero: true,
+          })
+        : null;
+    },
+  },
+
+  {
+    id: "tech-rented-address",
+    run: (c) => {
+      const host = (c.domain ?? "").toLowerCase();
+      const PLATFORMS = /\.(easy\.co|wixsite\.com|wix\.com|weebly\.com|blogspot\.com|wordpress\.com|myshopify\.com|netlify\.app|vercel\.app|github\.io|webflow\.io|carrd\.co|godaddysites\.com|business\.site|square\.site|mystrikingly\.com|framer\.website|framer\.app|super\.site|notion\.site)$/;
+      return PLATFORMS.test(host)
+        ? F({
+            category: CATS.T, severity: "critical",
+            title: "The business does not own its web address",
+            evidence: `${host} is a rented subdomain of ${host.match(PLATFORMS)[1]}`,
+            internal_detail: "Register a proper domain, move the site (or at least mirror it) there, and 301 the platform address across. Until then every ranking signal accrues to the platform's domain, not the business.",
+            client_summary: "The website lives inside someone else's address, so all the reputation it earns with Google belongs to that platform, and it all vanishes if the site ever moves.",
+            reach: "high", effort: "medium",
+          })
+        : null;
+    },
+  },
+  {
+    id: "kw-few-indexable-pages",
+    run: (c) => {
+      const pages = Math.max(c.probes.sitemap?.count ?? 0, (c.dom.internalPaths ?? []).length + 1);
+      return pages >= 2 && pages <= 4
+        ? F({
+            category: CATS.K, severity: "medium",
+            title: `Only ${pages} pages compete for every possible search`,
+            evidence: `Sitemap URLs: ${c.probes.sitemap?.count ?? 0}; distinct internal links: ${(c.dom.internalPaths ?? []).length}`,
+            internal_detail: "Map the service/product/location matrix and give each real search intent its own indexable page.",
+            client_summary: `With ${pages} pages the site can only enter a handful of searches, whatever their quality.`,
+            reach: "high", effort: "medium",
+          })
+        : null;
+    },
+  },
+  {
+    id: "content-shallow-key-pages",
+    run: (c) => {
+      const kp = (c.probes.keyPages ?? []).filter((p) => p.code === 200 && p.words != null);
+      if (kp.length < 2) return null;
+      const thin = kp.filter((p) => p.words < 120);
+      return thin.length / kp.length >= 0.7
+        ? F({
+            category: CATS.C, severity: "high",
+            title: "The inner pages are as thin as the front",
+            evidence: `${thin.length} of ${kp.length} key pages carry under 120 words as served: ${thin.slice(0, 4).map((p) => `${p.path} (${p.words}w)`).join(", ")}`,
+            internal_detail: "Every listed page needs real copy: what it is, for whom, why this business. Template shells rank for nothing.",
+            client_summary: "Behind the front page the other pages are shells, so there is no depth anywhere for Google to reward.",
+            reach: "high", effort: "medium",
           })
         : null;
     },

@@ -108,6 +108,9 @@ async function probe(domain, log) {
       title: r.body?.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? null,
       hasDesc: /<meta[^>]+name=["']description["']/i.test(r.body ?? ""),
       h1Count: (r.body?.match(/<h1[\s>]/gi) ?? []).length,
+      words: (r.body ?? "")
+        .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").split(" ").filter((w) => w.length > 1).length,
     });
   }
   return p;
