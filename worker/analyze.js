@@ -1,7 +1,7 @@
 // DISCOVA analyzer pipeline — Audit tier.
 // crawl (raw + rendered) → checks → verify → score → write.
 import { chromium } from "playwright";
-import { CHECKS, collectStrengths } from "./checks.js";
+import { CHECKS, collectStrengths, ASSESSED, REGISTER } from "./checks.js";
 import { designReview } from "./design.js";
 import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
@@ -74,6 +74,9 @@ async function probe(domain, log) {
       break;
     }
   }
+
+  p.faviconIco = await httpGet(`${base}/favicon.ico`, { method: "HEAD", timeout: 8000 })
+    .then((r) => r.code).catch(() => 0);
 
   const nfPath = `discova-check-${Date.now().toString(36)}`;
   p.notFound = await httpGet(`${base}/${nfPath}`).then((r) => ({ code: r.code, path: nfPath })).catch((e) => ({ error: e.message }));
@@ -168,6 +171,9 @@ async function render(base, log, rawBody) {
         }).filter(Boolean),
         h1s: [...document.querySelectorAll("h1")].map((h) => h.textContent.trim().slice(0, 60)),
         h1Count: document.querySelectorAll("h1").length,
+        h2Count: document.querySelectorAll("h2").length,
+        faviconLink: !!document.querySelector('link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'),
+        altSamples: [...document.images].map((i) => (i.getAttribute("alt") || "").trim()).filter(Boolean).slice(0, 40),
         words: text.trim().split(/\s+/).length,
         internalPaths: [...new Set([...document.querySelectorAll("a[href]")]
           .filter((a) => a.hostname === location.hostname && a.pathname !== "/" && !a.href.includes("#"))
@@ -321,8 +327,14 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   await onStatus("scoring");
   const pendingCats = design ? [CATS.A] : [CATS.D, CATS.A];
   const injected = design ? { [CATS.D]: design.score } : {};
-  const { catScores, overall, band } = scoreRun(findings, { pendingCats, injected });
-  const areas = rollUp(catScores, findings, { pendingCats });
+  const coverage = Object.fromEntries(
+    Object.entries(REGISTER).map(([cat, r]) => [
+      cat,
+      cat === CATS.D && design ? 1 : Math.min(1, +(((ASSESSED[cat] ?? 0)) / r.register).toFixed(2)),
+    ])
+  );
+  const { catScores, overall, band } = scoreRun(findings, { pendingCats, injected, coverage });
+  const areas = rollUp(catScores, findings, { pendingCats, coverage });
   const strengths = collectStrengths(ctx);
 
   const scores = {
@@ -331,7 +343,13 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     cat_scores: catScores,
     design_pending: !design,
     checks_run: CHECKS.length,
-    coverage_note: `engine v1 runs ${CHECKS.length} of the 160-check register; scores reflect assessed checks only`,
+    category_coverage: Object.fromEntries(
+      Object.entries(REGISTER).map(([cat, r]) => [
+        cat,
+        { assessed: ASSESSED[cat] ?? 0, register: r.register, weight_confidence: coverage[cat] },
+      ])
+    ),
+    coverage_note: `engine assesses ${CHECKS.length} of the 160-check register; a category's score means \"no issues found among its assessed checks\", weighted by its coverage confidence`,
     engine: tier === "audit" ? "audit-v1" : `${tier}-v1`,
     ...(renderFailed ? { partial_note: "the page could not be rendered in a browser, so browser-verified checks were skipped" } : {}),
   };

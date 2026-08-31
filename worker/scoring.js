@@ -41,7 +41,11 @@ function bandFor(score, table) {
 // findings: [{category, severity, score_impact, title, client_summary, evidence_label}]
 // pendingCats: categories not yet assessable (e.g. Design until stage 5) —
 // their weight is redistributed proportionally per framework §6.3.
-export function scoreRun(findings, { pendingCats = [], injected = {} } = {}) {
+// coverage: {catName: 0..1} — how much of the framework register this build
+// assesses per category. A category's claim on the overall is its framework
+// weight scaled by that coverage: the score is the evidence-weighted average
+// of what was actually assessed, never credit for unexamined ground.
+export function scoreRun(findings, { pendingCats = [], injected = {}, coverage = {} } = {}) {
   const catScores = {};
   for (const cat of Object.values(CATS)) {
     if (pendingCats.includes(cat)) continue;
@@ -53,13 +57,14 @@ export function scoreRun(findings, { pendingCats = [], injected = {} } = {}) {
     catScores[cat] = Math.max(0, Math.round(s));
   }
 
+  const effWeight = (c) => WEIGHTS[c] * (coverage[c] ?? 1);
   const activeWeight = Object.values(CATS)
     .filter((c) => !pendingCats.includes(c))
-    .reduce((sum, c) => sum + WEIGHTS[c], 0);
+    .reduce((sum, c) => sum + effWeight(c), 0);
 
   let overall = 0;
   for (const [cat, s] of Object.entries(catScores)) {
-    overall += s * (WEIGHTS[cat] / activeWeight);
+    overall += s * (effWeight(cat) / activeWeight);
   }
   overall = Math.round(overall);
 
@@ -79,13 +84,14 @@ const AREA_MAP = [
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export function rollUp(catScores, findings, { pendingCats = [] } = {}) {
+export function rollUp(catScores, findings, { pendingCats = [], coverage = {} } = {}) {
   const areas = [];
   for (const area of AREA_MAP) {
     const active = area.cats.filter((c) => !pendingCats.includes(c));
     if (active.length === 0) continue; // area entirely pending — omitted, noted on run
-    const w = active.reduce((s, c) => s + WEIGHTS[c], 0);
-    const score = Math.round(active.reduce((s, c) => s + catScores[c] * (WEIGHTS[c] / w), 0));
+    const cw = (c) => WEIGHTS[c] * (coverage[c] ?? 1);
+    const w = active.reduce((s, c) => s + cw(c), 0) || 1;
+    const score = Math.round(active.reduce((s, c) => s + catScores[c] * (cw(c) / w), 0));
     const worst = findings
       .filter((f) => active.includes(f.category) && f.severity && f.score_impact)
       .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))[0];

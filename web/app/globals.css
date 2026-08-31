@@ -134,3 +134,16 @@ input[type="radio"] {
   width: 15px;
   height: 15px;
 }
+
+/* ---- Mobile ---- */
+html { -webkit-text-size-adjust: 100%; }
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+summary, a, button { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 640px) {
+  img[alt="DISCOVA"] { height: 34px !important; padding: 5px 9px; }
+  [class*="border-t-2"] { border-radius: 6px; box-shadow: 4px 4px 0 rgba(22, 26, 14, 0.85); }
+}

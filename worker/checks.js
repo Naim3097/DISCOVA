@@ -676,7 +676,245 @@ export const CHECKS = [
         : null;
     },
   },
+
+  // ---------- Quality tier: separates "exists" from "good" ----------
+  // These fire only when the base element passes its presence check, so a site
+  // that merely HAS things stops scoring like a site whose things are GOOD.
+  {
+    id: "onpage-meta-desc-quality",
+    run: (c) => {
+      const d = (c.dom.metaDesc ?? "").trim();
+      if (!d) return null; // absence handled by onpage-meta-desc
+      const t = (c.dom.title ?? "").trim();
+      if (t && d.toLowerCase() === t.toLowerCase())
+        return F({
+          category: CATS.O, severity: "medium",
+          title: "The meta description just repeats the title",
+          evidence: `Description == title: "${d.slice(0, 90)}"`,
+          verification: "rendered_dom",
+          internal_detail: "Write a distinct 150-160 character description that sells the click, not a copy of the title.",
+          client_summary: "The line under the site's name in Google repeats the name instead of giving a reason to click.",
+          effort: "quick_win",
+        });
+      if (d.length < 70)
+        return F({
+          category: CATS.O, severity: "medium",
+          title: `The meta description is only ${d.length} characters`,
+          evidence: `"${d}" (${d.length} chars; effective snippets run 120-160)`,
+          verification: "rendered_dom",
+          internal_detail: "Extend to 150-160 characters: lead with the primary service and location, end with the differentiator.",
+          client_summary: "The site's one line in Google search results is too short to persuade anyone to choose it.",
+          effort: "quick_win",
+        });
+      if (d.length > 170)
+        return F({
+          category: CATS.O, severity: "low",
+          title: `The meta description runs to ${d.length} characters`,
+          evidence: `${d.length} chars; Google truncates around 160`,
+          verification: "rendered_dom",
+          internal_detail: "Trim to under 160 characters with the key message in the first 120.",
+          client_summary: "Google cuts the site's search-result line mid-sentence, so the pitch never finishes.",
+          effort: "quick_win",
+        });
+      return null;
+    },
+  },
+  {
+    id: "onpage-title-quality",
+    run: (c) => {
+      const t = (c.dom.title ?? "").trim();
+      if (!t) return null; // absence is critical elsewhere
+      if (t.length > 65)
+        return F({
+          category: CATS.O, severity: "low",
+          title: `The page title runs to ${t.length} characters`,
+          evidence: `"${t.slice(0, 80)}…" (${t.length} chars; Google shows ~60)`,
+          verification: "rendered_dom",
+          internal_detail: "Rework to under 60 characters with the primary term first.",
+          client_summary: "The site's name line gets cut off in Google before it finishes.",
+          effort: "quick_win",
+        });
+      if (t.length < 12)
+        return F({
+          category: CATS.O, severity: "low",
+          title: `The page title is only ${t.length} characters`,
+          evidence: `"${t}" (${t.length} chars)`,
+          verification: "rendered_dom",
+          internal_detail: "Use the full width: primary service + location + brand comfortably fit in 60 characters.",
+          client_summary: "The site introduces itself to Google with a few characters where a full sentence would win more searches.",
+          effort: "quick_win",
+        });
+      return null;
+    },
+  },
+  {
+    id: "kw-brand-only-title",
+    run: (c) => {
+      const t = (c.dom.title ?? "").trim();
+      if (!t) return null;
+      const brand = (c.domain ?? "").replace(/^www\./, "").split(".")[0].toLowerCase();
+      const fillers = /^(home|welcome|official|website|site|laman|rasmi|utama|my|the|and|of|for|page|homepage|index)$/i;
+      const words = t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+      const meaningful = words.filter(
+        (w) => w.length >= 3 && !fillers.test(w) && !brand.includes(w) && !w.includes(brand)
+      );
+      return meaningful.length === 0
+        ? F({
+            category: CATS.K, severity: "high",
+            title: "The title says who the business is, not what it does",
+            evidence: `Title "${t}" contains no service, product or place words beyond the brand name`,
+            evidence_label: "likely", confidence: 0.8, verification: "rendered_dom",
+            internal_detail: `Lead the <title> with what people actually search for, then the brand: "[primary service] [location] | ${t}".`,
+            client_summary: "People who already know the business can find it; people searching for what it sells cannot.",
+            reach: "high", effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "kw-generic-headings",
+    run: (c) => {
+      const h1s = (c.dom.h1s ?? []).map((h) => (h ?? "").trim()).filter(Boolean);
+      if (!h1s.length) return null; // absence handled by onpage-h1
+      const generic = /^(welcome|welcome to.{0,30}|home|hello|about( us)?|selamat datang.{0,30}|laman utama|utama|our services|services|introduction)$/i;
+      return h1s.every((h) => generic.test(h))
+        ? F({
+            category: CATS.K, severity: "medium",
+            title: "The main heading is a greeting, not an offer",
+            evidence: `h1: ${h1s.map((h) => `"${h.slice(0, 50)}"`).join(", ")}`,
+            evidence_label: "likely", confidence: 0.8, verification: "rendered_dom",
+            internal_detail: "Rewrite the h1 as the primary search phrase the page should win, not a welcome line.",
+            client_summary: "The biggest line on the page greets visitors instead of telling Google what the business sells.",
+            reach: "medium", effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "content-depth-modest",
+    run: (c) => {
+      const w = c.dom.words ?? 0;
+      return w >= 250 && w < 400
+        ? F({
+            category: CATS.C, severity: "medium",
+            title: `The homepage carries ${w} words where competitive pages run far deeper`,
+            evidence: `${w} rendered words; pages that win competitive searches typically carry 600+`,
+            verification: "rendered_dom",
+            internal_detail: "Deepen the homepage: the offer, who it serves, where, proof, and answers to the obvious objections.",
+            client_summary: "The page says enough to introduce the business but not enough to outrank anyone established.",
+            effort: "medium",
+          })
+        : null;
+    },
+  },
+  {
+    id: "content-headings-flat",
+    run: (c) => {
+      const w = c.dom.words ?? 0;
+      return w >= 250 && (c.dom.h2Count ?? 0) === 0
+        ? F({
+            category: CATS.C, severity: "low",
+            title: "The content has no section headings",
+            evidence: `${w} words with 0 <h2> section headings`,
+            verification: "rendered_dom",
+            internal_detail: "Break the copy into h2 sections named for the things people search (services, areas, FAQs).",
+            client_summary: "The page reads as one unbroken block, so neither skimming visitors nor Google can see its structure.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "content-stale-year",
+    run: (c) => {
+      const m = (c.dom.bodySample ?? "").match(/(?:©|copyright)\s*(?:\D{0,20})?((?:19|20)\d{2})(?!\s*[-–]\s*(?:19|20)\d{2})/i);
+      if (!m) return null;
+      const year = Number(m[1]);
+      const now = new Date().getFullYear();
+      return year <= now - 2
+        ? F({
+            category: CATS.C, severity: year <= now - 3 ? "medium" : "low",
+            title: `The site's copyright line still says ${year}`,
+            evidence: `Footer text: "${m[0]}" (current year ${now})`,
+            verification: "rendered_dom",
+            internal_detail: "Update the footer year (or generate it); a stale year is the classic abandoned-site signal.",
+            client_summary: `The site announces it was last touched in ${year}, which quietly tells visitors nobody is maintaining it.`,
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "serp-favicon",
+    run: (c) =>
+      c.dom.faviconLink === false && c.probes.faviconIco !== 200
+        ? F({
+            category: CATS.S, severity: "low",
+            title: "The site has no icon in search results and browser tabs",
+            evidence: `No <link rel="icon"> and /favicon.ico returns ${c.probes.faviconIco || "nothing"}`,
+            internal_detail: "Add a favicon (SVG or 48px+ PNG) and a link tag; Google shows it beside every mobile result.",
+            client_summary: "In search results and browser tabs the site appears with a blank placeholder where its mark should be.",
+            effort: "quick_win",
+          })
+        : null,
+  },
+  {
+    id: "img-alt-junk",
+    run: (c) => {
+      const alts = c.dom.altSamples ?? [];
+      if (alts.length < 5) return null;
+      const junk = alts.filter((a) =>
+        /\.(jpe?g|png|webp|gif)$|^(img|image|dsc|dscn|pic|photo|screenshot|whatsapp)[-_ ]?\d|^\d{6,}$|^untitled/i.test(a)
+      );
+      return junk.length / alts.length >= 0.3
+        ? F({
+            category: CATS.O, severity: "medium",
+            title: "Image descriptions are just filenames",
+            evidence: `${junk.length} of ${alts.length} alt texts are filenames, e.g. ${junk.slice(0, 3).map((j) => `"${j.slice(0, 40)}"`).join(", ")}`,
+            verification: "rendered_dom",
+            internal_detail: "Replace filename alts with what the image shows; a filename alt is worse than none for relevance.",
+            client_summary: "The pictures are technically labelled, but the labels are camera filenames that mean nothing to Google.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "ux-copyright-mismatch",
+    run: (c) => {
+      const t = c.dom.bodySample ?? "";
+      const other = t.match(/(?:©|copyright)[^.\n]{0,60}?([A-Z][A-Za-z&.\s]{3,40})(?:\.|All|$)/);
+      const brand = (c.domain ?? "").replace(/^www\./, "").split(".")[0].toLowerCase();
+      if (!other || !other[1]) return null;
+      const holder = other[1].trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      return holder.length >= 4 && !holder.includes(brand.replace(/[^a-z0-9]/g, "")) && !brand.replace(/[^a-z0-9]/g, "").includes(holder)
+        ? F({
+            category: CATS.U, severity: "low",
+            title: "The footer credits a different name than the site's own",
+            evidence: `Footer: "${other[0].slice(0, 80).trim()}" on ${c.domain}`,
+            evidence_label: "likely", confidence: 0.6, verification: "rendered_dom",
+            internal_detail: "Align the footer copyright with the trading name, or remove the template vendor's credit.",
+            client_summary: "The small print at the bottom names someone else, which reads as a template nobody finished.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
 ];
+
+// Framework register targets per category vs what this engine build assesses.
+// Honest coverage accounting: category_confidence = assessed / register.
+// Derived from the register at load: first category a check can emit is its home.
+export const ASSESSED = CHECKS.reduce((m, c) => {
+  const k = c.run.toString().match(/category: CATS\.([A-Z])/)?.[1];
+  if (k && CATS[k]) m[CATS[k]] = (m[CATS[k]] ?? 0) + 1;
+  return m;
+}, {});
+export const REGISTER = {
+  [CATS.T]: { register: 18 }, [CATS.O]: { register: 13 }, [CATS.C]: { register: 18 },
+  [CATS.K]: { register: 13 }, [CATS.S]: { register: 9 }, [CATS.L]: { register: 5 },
+  [CATS.A]: { register: 9 }, [CATS.U]: { register: 5 }, [CATS.D]: { register: 24 },
+};
 
 // Deterministic strengths — drawn from checks that PASSED. Real, never invented.
 export function collectStrengths(c) {

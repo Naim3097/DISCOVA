@@ -60,7 +60,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         </span>
         <span className="text-[var(--faint)] text-xs group-open:rotate-90 transition-transform">›</span>
       </summary>
-      <div className="px-4 pb-4 pt-3 pl-[68px] space-y-3.5 text-[13px] border-t border-[var(--hair)]">
+      <div className="px-4 pb-4 pt-3 pl-4 sm:pl-[68px] space-y-3.5 text-[13px] border-t border-[var(--hair)]">
         {f.evidence && (
           <p className="font-mono text-[11.5px] leading-relaxed text-[var(--muted)] bg-[var(--ground)] px-3 py-2.5 rounded-md whitespace-pre-wrap break-words max-h-36 overflow-y-auto">
             {f.evidence}
@@ -86,9 +86,9 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   );
 
   return (
-    <main className="min-h-screen px-6 py-10">
+    <main className="min-h-screen px-3 py-5 sm:px-6 sm:py-10">
       <div className="max-w-3xl mx-auto">
-        <header className="flex items-center justify-between pb-4">
+        <header className="flex items-center justify-between gap-2 flex-wrap pb-4">
           <span className="flex items-center gap-3">
             <Link href="/" className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -98,7 +98,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
               powered by lean.X digital
             </span>
           </span>
-          <span className="text-[11px] text-[var(--faint)]">
+          <span className="hidden sm:block text-[11px] text-[var(--faint)]">
             {run.tier} · framework v{run.framework_version} ·{" "}
             {new Date(run.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
           </span>
@@ -107,7 +107,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         <div className="border-t-2 border-[var(--ink)] bg-[var(--paper)]">
           {/* In-progress banner */}
           {running && (
-            <div className="px-8 py-5 border-b border-[var(--hair)] flex items-baseline justify-between">
+            <div className="px-4 sm:px-8 py-5 border-b border-[var(--hair)] flex items-baseline justify-between">
               <span className="text-sm text-[var(--accent)]">
                 Analysing {run.domain} — {run.status}…
               </span>
@@ -116,14 +116,14 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             </div>
           )}
           {run.status === "partial" && (
-            <div className="px-8 py-5 border-b border-[var(--hair)]">
+            <div className="px-4 sm:px-8 py-5 border-b border-[var(--hair)]">
               <span className="text-sm text-[var(--improve)]">
                 Partial run — {s.partial_note ?? "some checks could not be completed"}. The score reflects the checks that ran.
               </span>
             </div>
           )}
           {run.status === "failed" && (
-            <div className="px-8 py-5 border-b border-[var(--hair)]">
+            <div className="px-4 sm:px-8 py-5 border-b border-[var(--hair)]">
               <span className="text-sm text-[var(--attn)]">
                 This run failed{s.error ? `: ${s.error}` : "."}
               </span>
@@ -131,7 +131,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
           )}
 
           {/* Title + overall */}
-          <div className="px-8 pt-8 pb-7 border-b border-[var(--hair)]">
+          <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-7 border-b border-[var(--hair)]">
             <div className="flex items-baseline justify-between gap-4">
               <h1 className="serif text-3xl text-[var(--ink)]">{run.domain}</h1>
               {settled && (
@@ -168,8 +168,11 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                   </div>
                   {s.design_pending && (
                     <p className="mt-2 text-[11px] text-[var(--faint)]">
-                      Design &amp; Brand and Authority pending their integrations — their weight is redistributed. {s.coverage_note}.
+                      Design &amp; Brand and Authority pending their integrations — their weight is redistributed.
                     </p>
+                  )}
+                  {s.coverage_note && (
+                    <p className="mt-2 text-[11px] text-[var(--faint)]">{s.coverage_note}.</p>
                   )}
                 </div>
               </div>
@@ -178,16 +181,19 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Areas */}
           {areas.length > 0 && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-4">Where it stands</p>
               {areas.map((a, i) => (
                 <div key={a.key} className={`py-2.5 ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="serif text-[15px] text-[var(--ink)] w-44 shrink-0">{a.label}</span>
-                    <span className="flex-1 h-2.5 bg-[var(--track)]">
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                    <div className="flex items-baseline justify-between sm:contents">
+                    <span className="serif text-[15px] text-[var(--ink)] sm:w-44 sm:shrink-0">{a.label}</span>
+                    
+                    <span className="text-sm text-[var(--ink)] tabular-nums sm:order-last sm:w-8 sm:text-right">{a.score}</span>
+                    </div>
+                    <span className="w-full h-2.5 bg-[var(--track)] sm:flex-1">
                       <span className="block h-full bg-[var(--fill)]" style={{ width: `${a.score}%` }} />
                     </span>
-                    <span className="w-8 text-right text-sm text-[var(--ink)] tabular-nums">{a.score}</span>
                   </div>
                   <p className="mt-1 text-[13px]">
                     <span style={{ color: STATUS_COLOR[a.status] ?? "var(--muted)" }} className="serif">{a.status}</span>
@@ -200,18 +206,18 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Design sub-scores (fixture-era runs only, until stage 5) */}
           {subs.length > 0 && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-4">
                 Design review — {s.design_total?.points}/{s.design_total?.max} criteria met
               </p>
               {subs.map((d, i) => (
-                <div key={d.area} className={`flex items-center gap-3 py-2 ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
-                  <span className="serif text-[14px] text-[var(--ink)] w-44 shrink-0">{d.area}</span>
+                <div key={d.area} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2 ${i > 0 ? "border-t border-[var(--hair)]" : ""}`}>
+                  <span className="serif text-[14px] text-[var(--ink)] w-full sm:w-44 sm:shrink-0">{d.area}</span>
                   <span className="w-28 h-2 bg-[var(--track)] shrink-0">
                     <span className="block h-full bg-[var(--fill)]" style={{ width: `${(d.points / d.max) * 100}%` }} />
                   </span>
                   <span className="w-10 text-sm text-[var(--ink)] tabular-nums shrink-0">{d.points}/{d.max}</span>
-                  <span className="text-[13px] text-[var(--muted)] flex-1">{d.note}</span>
+                  <span className="text-[13px] text-[var(--muted)] basis-full sm:basis-0 sm:flex-1">{d.note}</span>
                 </div>
               ))}
             </section>
@@ -219,12 +225,12 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Clearest gap */}
           {gap && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-4">The clearest gap</p>
               {[["label_a", "sub_a", "value_a", "var(--fill)"], ["label_b", "sub_b", "value_b", "var(--attn)"]].map(
                 ([l, sub, v, color]) => (
                   <div key={l} className="flex items-center gap-3 py-1.5">
-                    <span className="w-56 shrink-0 text-[13px]">
+                    <span className="w-32 sm:w-56 shrink-0 text-[13px]">
                       <span className="text-[var(--ink)] font-semibold">{gap[l]}</span>
                       <br /><span className="text-[var(--muted)]">{gap[sub]}</span>
                     </span>
@@ -241,7 +247,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Strengths */}
           {strengths.length > 0 && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-3">What is working</p>
               <ul className="space-y-1.5">
                 {strengths.map((t) => (
@@ -255,7 +261,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Site-wide survey (Investigation tier) */}
           {inv && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-3">Site-wide survey</p>
               {inv.error ? (
                 <p className="text-sm text-[var(--attn)]">{inv.error}</p>
@@ -286,7 +292,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Intelligence tier: external data + strategy (internal only) */}
           {s.intelligence && (
-            <section className="px-8 py-7 border-b border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Intelligence</p>
               <p className="text-[12px] text-[var(--faint)] mt-1 mb-4">
                 External data and strategy. Internal only — never client-facing. The score is unaffected.
@@ -325,10 +331,10 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                       <span className={`flex-1 truncate ${c.self ? "font-semibold text-[var(--ink)]" : "text-[var(--ink)]"}`}>
                         {c.domain}{c.self ? " (this site)" : ""}{c.reachable === false ? " — unreachable" : ""}
                       </span>
-                      <span className="w-28 text-right tabular-nums text-[var(--muted)]">
+                      <span className="w-20 sm:w-28 text-right tabular-nums text-[var(--muted)] text-[11px] sm:text-[13px]">
                         {c.sitemap_pages != null ? `${c.sitemap_pages} pages` : "no sitemap"}
                       </span>
-                      <span className="w-24 text-right tabular-nums text-[var(--muted)]">
+                      <span className="w-20 sm:w-24 text-right tabular-nums text-[var(--muted)] text-[11px] sm:text-[13px]">
                         {c.psi_mobile != null ? `${c.psi_mobile}/100 mobile` : "—"}
                       </span>
                     </div>
@@ -375,7 +381,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Findings */}
           {sorted.length > 0 && (
-            <section className="px-8 py-7">
+            <section className="px-4 sm:px-8 py-7">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-2">
                 Findings — {sorted.length}
               </p>
@@ -385,7 +391,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
 
           {/* Investigation patterns — never scored, never in the client PDF */}
           {invSorted.length > 0 && (
-            <section className="px-8 py-7 border-t border-[var(--hair)]">
+            <section className="px-4 sm:px-8 py-7 border-t border-[var(--hair)]">
               <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">
                 Site-wide patterns — {invSorted.length}
               </p>

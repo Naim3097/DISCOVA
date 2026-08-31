@@ -18,7 +18,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   if (!client) {
     return (
       <Shell>
-        <div className="bg-[var(--paper)] px-8 py-10">
+        <div className="bg-[var(--paper)] px-4 sm:px-8 py-10">
           <h2 className="serif text-xl text-[var(--ink)]">Database not connected</h2>
           <p className="mt-3 text-sm">Add the Supabase values in Vercel → Environment Variables, then redeploy.</p>
         </div>
@@ -40,7 +40,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
     <Shell>
       {anyRunning && <AutoRefresh every={5000} />}
       {/* Engine status */}
-      <div className="bg-[var(--paper)] px-8 py-5 flex items-baseline justify-between border-b border-[var(--hair)]">
+      <div className="bg-[var(--paper)] px-4 sm:px-8 py-4 sm:py-5 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between border-b border-[var(--hair)]">
         <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Engine</span>
         <span className="text-sm" style={{ color: engineAlive ? "var(--good)" : "var(--attn)" }}>
           {engineAlive
@@ -49,7 +49,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         </span>
       </div>
       {!process.env.APP_PASSWORD && (
-        <div className="bg-[var(--paper)] px-8 py-3 border-b border-[var(--hair)]">
+        <div className="bg-[var(--paper)] px-4 sm:px-8 py-3 border-b border-[var(--hair)]">
           <p className="text-[12px] text-[var(--improve)]">
             No team password set — anyone with the link can use this. Add APP_PASSWORD in Vercel to close the gate.
           </p>
@@ -57,7 +57,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
       )}
 
       {/* New analysis */}
-      <div className="bg-[var(--paper)] px-8 py-7 border-b border-[var(--hair)]">
+      <div className="bg-[var(--paper)] px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
         <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">New analysis</p>
         {err && (
           <p className="mt-3 text-sm text-[var(--attn)]">
@@ -65,36 +65,36 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           </p>
         )}
         <form action={startAudit} className="mt-4">
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               name="domain" required placeholder="example.com.my"
               className="flex-1 border border-[var(--rule)] bg-transparent px-4 py-2.5 text-[15px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
             />
             <button
               type="submit"
-              className="shrink-0 bg-[var(--accent)] text-white px-6 py-2.5 text-sm hover:opacity-90"
+              className="w-full sm:w-auto shrink-0 bg-[var(--accent)] text-white px-6 py-2.5 text-sm hover:opacity-90"
             >
               Run audit
             </button>
           </div>
           <div className="mt-5">
-            <label className="flex items-baseline gap-4 py-3 cursor-pointer">
+            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 cursor-pointer sm:flex sm:gap-4">
               <input type="radio" name="tier" value="audit" defaultChecked className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Audit</span>
-              <span className="text-sm flex-1">The complete lean.X audit. Key pages, full check register, client-ready PDF.</span>
-              <span className="text-xs text-[var(--faint)] shrink-0">~2 min</span>
+              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Audit</span>
+              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~2 min</span>
+              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">The complete lean.X audit. Key pages, full check register, client-ready PDF.</span>
             </label>
-            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] cursor-pointer">
+            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 border-t border-[var(--hair)] cursor-pointer sm:flex sm:gap-4">
               <input type="radio" name="tier" value="investigation" className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Investigation</span>
-              <span className="text-sm flex-1">Everything in Audit, plus a site-wide crawl: the patterns and template-level causes behind the findings. Same score.</span>
-              <span className="text-xs text-[var(--faint)] shrink-0">~5 min</span>
+              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Investigation</span>
+              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~5 min</span>
+              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">Everything in Audit, plus a site-wide crawl: the patterns and template-level causes behind the findings. Same score.</span>
             </label>
-            <label className="flex items-baseline gap-4 py-3 border-t border-[var(--hair)] cursor-pointer">
+            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 border-t border-[var(--hair)] cursor-pointer sm:flex sm:gap-4">
               <input type="radio" name="tier" value="intelligence" className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] w-32 shrink-0">Intelligence</span>
-              <span className="text-sm flex-1">Everything in Investigation, plus Google&apos;s speed data, competitor comparison, priorities and an internal 30/60/90. Same score.</span>
-              <span className="text-xs text-[var(--faint)] shrink-0">~6 min</span>
+              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Intelligence</span>
+              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~6 min</span>
+              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">Everything in Investigation, plus Google&apos;s speed data, competitor comparison, priorities and an internal 30/60/90. Same score.</span>
             </label>
             <div className="pt-2 pb-1 border-t border-[var(--hair)]">
               <input
@@ -108,7 +108,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
       </div>
 
       {/* Runs */}
-      <div className="bg-[var(--paper)] px-8 py-7">
+      <div className="bg-[var(--paper)] px-4 sm:px-8 py-7">
         <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
         {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
         {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
@@ -120,18 +120,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             return (
               <div key={r.id}
                 className="flex items-center gap-3 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3 group">
-                <Link href={`/run/${r.id}`} className="flex items-center gap-3 py-2.5 flex-1 min-w-0">
+                <Link href={`/run/${r.id}`} className="flex items-center gap-2 sm:gap-3 py-2.5 flex-1 min-w-0">
                   <span className="text-[14px] font-medium text-[var(--ink)] flex-1 truncate">{r.domain}</span>
                   <span className="hidden sm:block text-[9px] font-mono uppercase tracking-wider text-[var(--faint)] border border-[var(--rule)] rounded px-1.5 py-0.5 w-28 text-center shrink-0">
                     {r.tier}
                   </span>
-                  <span className="text-[11px] font-mono text-[var(--faint)] w-24 text-right shrink-0">
+                  <span className="hidden min-[440px]:block text-[11px] font-mono text-[var(--faint)] w-24 text-right shrink-0">
                     {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{" · "}
                     {new Date(r.started_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <span className="flex items-baseline justify-end gap-1.5 w-44 shrink-0">
+                  <span className="flex items-baseline justify-end gap-1.5 w-32 min-[440px]:w-44 shrink-0">
                     <span
-                      className={`text-[10px] font-mono text-right w-20 truncate ${running ? "animate-pulse" : ""}`}
+                      className={`text-[10px] font-mono text-right w-12 min-[440px]:w-20 truncate ${running ? "animate-pulse" : ""}`}
                       style={{
                         color:
                           r.status === "failed" ? "var(--attn)"
@@ -167,13 +167,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen px-6 py-10">
+    <main className="min-h-screen px-3 py-5 sm:px-6 sm:py-10">
       <div className="max-w-3xl mx-auto">
-        <header className="flex items-center justify-between pb-4">
+        <header className="flex items-center justify-between gap-2 flex-wrap pb-4">
           <span className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/discova-logo.png" alt="DISCOVA" className="h-8 w-auto" />
-            <span className="text-[10px] tracking-[.14em] uppercase text-[var(--muted)] pt-1.5">
+            <span className="hidden min-[400px]:block text-[10px] tracking-[.14em] uppercase text-[var(--muted)] pt-1.5">
               powered by lean.X digital
             </span>
           </span>
