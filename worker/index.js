@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.11.1-reality";
+const VERSION = "0.11.2-reality";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -62,7 +62,7 @@ function startServer() {
     try {
       if (u.pathname === "/health") {
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, version: VERSION, db: !!pool }));
+        res.end(JSON.stringify({ ok: true, version: VERSION, db: !!pool, keys: { anthropic: !!process.env.ANTHROPIC_API_KEY, serper: !!process.env.SERPER_API_KEY, psi: !!process.env.PSI_API_KEY, worker_secret: !!process.env.WORKER_SECRET } }));
         return;
       }
       if (u.pathname === "/pdf") {
