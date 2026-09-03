@@ -19,16 +19,16 @@ async function serperQuery(q, key) {
   });
   if (!res.ok) throw new Error(`serper ${res.status}`);
   const j = await res.json();
-  return {
-    total: Number(j.searchInformation?.totalResults ?? (j.organic?.length ?? 0)),
-    items: (j.organic ?? []).map((o) => ({ link: o.link })),
-  };
+  const items = (j.organic ?? []).map((o) => ({ link: o.link }));
+  // serper returns no total count: a full page of results means "at least this many".
+  return { total: items.length, page_full: items.length >= 10, items };
 }
 
 async function cseAdapter(q, key, cx) {
   const j = await cseQuery(q, key, cx);
   return {
     total: Number(j.searchInformation?.totalResults ?? 0),
+    page_full: false,
     items: (j.items ?? []).map((i) => ({ link: i.link })),
   };
 }
@@ -83,6 +83,7 @@ export async function googleReality(ctx, { log }) {
   try {
     const site = await search(`site:${domain}`);
     out.indexed_pages = site.total;
+    out.indexed_at_least = !!site.page_full; // true = "10+", the count is a floor not a total
 
     // Brand = the human name the site gives itself, falling back to the domain label.
     const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
@@ -111,6 +112,7 @@ export function realityForWriter(gr) {
   if (!gr || gr.pending || gr.error) return null;
   const bits = [];
   if (gr.indexed_pages === 0) bits.push("Google currently lists NONE of this site's pages");
+  else if (gr.indexed_at_least) bits.push("Google lists this site's pages in healthy numbers (a full page of results and more)");
   else bits.push(`Google lists ${gr.indexed_pages} of this site's pages`);
   if (gr.brand_found === false) bits.push("a search for the business's own name does not surface this site in the top ten");
   else if (gr.brand_position) bits.push(`the site appears at position ${gr.brand_position} for its own name`);
@@ -124,8 +126,11 @@ export function realityForWriter(gr) {
 // 50 points for how much of the site Google lists, 50 for being found by name.
 export function presenceScore(gr, builtPages) {
   if (!gr || gr.pending || gr.error || typeof gr.indexed_pages !== "number") return null;
+  // The count is a floor (we see at most one page of results), so measure
+  // against what is knowable: full page = fully healthy; small sites exactly.
   const built = Math.max(builtPages ?? 1, 1);
-  const indexRatio = Math.min(1, gr.indexed_pages / built);
+  const base = Math.min(built, 10);
+  const indexRatio = Math.min(1, gr.indexed_pages / base);
   const indexPts = Math.round(indexRatio * 50);
   const namePts = gr.brand_position != null
     ? (gr.brand_position <= 3 ? 50 : 35)
@@ -133,7 +138,7 @@ export function presenceScore(gr, builtPages) {
   return {
     score: Math.min(100, indexPts + namePts),
     components: {
-      indexed: `${gr.indexed_pages} of ~${built} pages listed -> ${indexPts}/50`,
+      indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/50`,
       own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/50` : "not found in top 10 -> 0/50",
     },
   };

@@ -51,7 +51,7 @@ export function buildReportHtml(run, findings) {
     ? `<div class="reality"><span class="lbl">GOOGLE TODAY</span>${
         gr.indexed_pages === 0
           ? "Google currently lists <b>none</b> of this site's pages"
-          : `Google currently lists <b>${gr.indexed_pages}</b> of this site's pages`
+          : `Google currently lists <b>${gr.indexed_at_least ? "10+" : gr.indexed_pages}</b> of this site's pages`
       }${
         gr.brand_found === false ? " &middot; a search for the business's own name does not find this site" :
         gr.brand_position ? ` &middot; found at position ${gr.brand_position} for its own name` : ""

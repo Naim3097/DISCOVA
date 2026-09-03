@@ -189,7 +189,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                         <span style={{ color: s.google_reality.indexed_pages === 0 ? "var(--attn)" : "var(--good)" }}>
                           {s.google_reality.indexed_pages === 0
                             ? "no pages in Google's index"
-                            : `${s.google_reality.indexed_pages} pages indexed`}
+                            : `${s.google_reality.indexed_at_least ? "10+" : s.google_reality.indexed_pages} pages indexed`}
                         </span>
                         {s.google_reality.brand_found === false && (
                           <span className="text-[var(--attn)]">not found for its own name</span>
