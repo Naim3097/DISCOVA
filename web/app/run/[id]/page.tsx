@@ -149,7 +149,15 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                 <div>
                   <span className="serif text-6xl text-[var(--ink)] leading-none">{s.overall ?? "—"}</span>
                   <span className="serif text-lg text-[var(--muted)]">/100</span>
-                  <p className="mt-1.5 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">Overall health</p>
+                  <p className="mt-1.5 text-[10px] tracking-[.14em] uppercase text-[var(--muted)]">Visibility score</p>
+                  {s.presence != null && (
+                    <p className="mt-1 text-[11px] text-[var(--muted)] tabular-nums">
+                      readiness {s.readiness} <span className="text-[var(--faint)]">×60%</span> + presence {s.presence} <span className="text-[var(--faint)]">×40%</span>
+                    </p>
+                  )}
+                  {s.score_note && (
+                    <p className="mt-1 text-[11px] text-[var(--faint)] max-w-40">{s.score_note}</p>
+                  )}
                 </div>
                 <div className="flex-1 min-w-56 pt-1.5">
                   <div className="flex gap-0.5 h-3">

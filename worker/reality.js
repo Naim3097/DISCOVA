@@ -119,3 +119,22 @@ export function realityForWriter(gr) {
   }
   return bits.join("; ") + ".";
 }
+
+// Observed Google presence, 0-100, deterministic and tier-independent:
+// 50 points for how much of the site Google lists, 50 for being found by name.
+export function presenceScore(gr, builtPages) {
+  if (!gr || gr.pending || gr.error || typeof gr.indexed_pages !== "number") return null;
+  const built = Math.max(builtPages ?? 1, 1);
+  const indexRatio = Math.min(1, gr.indexed_pages / built);
+  const indexPts = Math.round(indexRatio * 50);
+  const namePts = gr.brand_position != null
+    ? (gr.brand_position <= 3 ? 50 : 35)
+    : 0;
+  return {
+    score: Math.min(100, indexPts + namePts),
+    components: {
+      indexed: `${gr.indexed_pages} of ~${built} pages listed -> ${indexPts}/50`,
+      own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/50` : "not found in top 10 -> 0/50",
+    },
+  };
+}

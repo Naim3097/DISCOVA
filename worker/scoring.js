@@ -29,6 +29,10 @@ const STATUS = [
   [75, "Good"], [55, "Fair"], [35, "Needs improvement"], [0, "Needs attention"],
 ];
 
+export function bandForScore(score) {
+  return bandFor(score, BANDS);
+}
+
 export function deductionFor(severity) {
   return DEDUCTION[severity] ?? 0;
 }

@@ -4,10 +4,10 @@ import { chromium } from "playwright";
 import { CHECKS, collectStrengths, ASSESSED, REGISTER } from "./checks.js";
 import { designReview } from "./design.js";
 import { writeNarrative, gapCandidates } from "./writer.js";
-import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
+import { CATS, scoreRun, rollUp, deductionFor, bandForScore } from "./scoring.js";
 import { surveySite } from "./survey.js";
 import { intelligenceLayer, buildPriorities, buildPlan } from "./intelligence.js";
-import { googleReality, realityForWriter } from "./reality.js";
+import { googleReality, realityForWriter, presenceScore } from "./reality.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
@@ -391,10 +391,32 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   await onStatus("verifying");
   scores.google_reality = await googleReality(ctx, { log }).catch((e) => ({ error: e.message }));
 
+  // The Visibility Score merges what the site IS with whether Google SHOWS it:
+  // 60% on-site readiness, 40% observed presence. Without a search key the
+  // score is readiness-only and says so. Same formula at every tier.
+  const builtPages = Math.max(ctx.probes.sitemap?.count ?? 0, (ctx.dom.internalPaths ?? []).length + 1);
+  const presence = presenceScore(scores.google_reality, builtPages);
+  scores.readiness = scores.overall;
+  if (presence) {
+    scores.presence = presence.score;
+    scores.presence_components = presence.components;
+    scores.overall = Math.round(0.6 * scores.readiness + 0.4 * presence.score);
+    scores.band = bandForScore(scores.overall);
+    scores.score_formula = "60% site readiness + 40% observed Google presence";
+    const gv = scores.areas.find((ar) => ar.key === "google_visibility");
+    if (gv) {
+      gv.score = Math.round(0.5 * gv.score + 0.5 * presence.score);
+      gv.status = gv.score >= 75 ? "Good" : gv.score >= 55 ? "Fair" : gv.score >= 35 ? "Needs improvement" : "Needs attention";
+    }
+    log(`visibility score: readiness ${scores.readiness} x60% + presence ${presence.score} x40% = ${scores.overall}`);
+  } else {
+    scores.score_note = "score is site readiness only; Google presence joins it when the search key is set";
+  }
+
   await onStatus("writing");
   const narrative = await writeNarrative({
     domain,
-    overall, band, areas, strengths,
+    overall: scores.overall, band: scores.band, areas, strengths,
     findings: findings.map((f) => ({
       severity: f.severity, category: f.category, title: f.title, client_summary: f.client_summary,
     })),

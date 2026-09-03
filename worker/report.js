@@ -58,6 +58,8 @@ export function buildReportHtml(run, findings) {
       }${
         gr.domain_age_days != null && gr.domain_age_days < 180
           ? ` &middot; the web address is ${gr.domain_age_days} days old` : ""
+      }${
+        s.score_formula ? ` &middot; score = 60% readiness (${s.readiness}) + 40% Google presence (${s.presence})` : ""
       }.</div>`
     : "";
 
