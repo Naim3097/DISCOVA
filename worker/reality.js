@@ -7,6 +7,32 @@
 
 const CSE = "https://www.googleapis.com/customsearch/v1";
 
+// Primary index source: serper.dev (real Google results; Google deprecated
+// whole-web Programmable Search Engines, closing the official free route).
+// gl=my so results match what Malaysian searchers actually see.
+async function serperQuery(q, key) {
+  const res = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    signal: AbortSignal.timeout(15_000),
+    headers: { "X-API-KEY": key, "content-type": "application/json" },
+    body: JSON.stringify({ q, gl: "my", num: 10 }),
+  });
+  if (!res.ok) throw new Error(`serper ${res.status}`);
+  const j = await res.json();
+  return {
+    total: Number(j.searchInformation?.totalResults ?? (j.organic?.length ?? 0)),
+    items: (j.organic ?? []).map((o) => ({ link: o.link })),
+  };
+}
+
+async function cseAdapter(q, key, cx) {
+  const j = await cseQuery(q, key, cx);
+  return {
+    total: Number(j.searchInformation?.totalResults ?? 0),
+    items: (j.items ?? []).map((i) => ({ link: i.link })),
+  };
+}
+
 async function cseQuery(q, key, cx) {
   const u = `${CSE}?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(q)}&num=10`;
   const res = await fetch(u, { signal: AbortSignal.timeout(15_000) });
@@ -34,29 +60,36 @@ async function domainAgeDays(domain) {
 
 export async function googleReality(ctx, { log }) {
   const domain = ctx.domain.replace(/^www\./, "");
+  const serper = process.env.SERPER_API_KEY;
   const key = process.env.GOOGLE_CSE_KEY, cx = process.env.GOOGLE_CSE_CX;
+  const search = serper
+    ? (q) => serperQuery(q, serper)
+    : key && cx
+      ? (q) => cseAdapter(q, key, cx)
+      : null;
   const out = { checked_at: new Date().toISOString().slice(0, 10) };
 
   const age = await domainAgeDays(ctx.domain);
   if (age) { out.domain_registered = age.registered; out.domain_age_days = age.age_days; }
 
-  if (!key || !cx) {
+  if (!search) {
     out.pending = true;
-    out.note = "Google index data arrives when GOOGLE_CSE_KEY and GOOGLE_CSE_CX are set";
-    log("google reality: index check pending (no CSE key)");
+    out.note = "Google index data arrives when SERPER_API_KEY is set";
+    log("google reality: index check pending (no search key)");
     return out;
   }
+  out.source = serper ? "serper.dev (Google results)" : "Google Custom Search";
 
   try {
-    const site = await cseQuery(`site:${domain}`, key, cx);
-    out.indexed_pages = Number(site.searchInformation?.totalResults ?? 0);
+    const site = await search(`site:${domain}`);
+    out.indexed_pages = site.total;
 
     // Brand = the human name the site gives itself, falling back to the domain label.
     const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
     const brand = title.length >= 3 && title.length <= 60 ? title : domain.split(".")[0];
     out.brand_query = brand;
-    const bres = await cseQuery(`"${brand}"`, key, cx);
-    const items = bres.items ?? [];
+    const bres = await search(`"${brand}"`);
+    const items = bres.items;
     const pos = items.findIndex((i) => {
       try { return new URL(i.link).hostname.replace(/^www\./, "") === domain; } catch { return false; }
     });
