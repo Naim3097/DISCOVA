@@ -174,6 +174,39 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                   {s.coverage_note && (
                     <p className="mt-2 text-[11px] text-[var(--faint)]">{s.coverage_note}.</p>
                   )}
+                  {s.google_reality && !s.google_reality.pending && !s.google_reality.error && (
+                    <div className="mt-3 pt-2 border-t border-[var(--hair)]">
+                      <p className="text-[10px] tracking-[.12em] uppercase text-[var(--muted)] mb-1">Google today</p>
+                      <p className="text-[12px] flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span style={{ color: s.google_reality.indexed_pages === 0 ? "var(--attn)" : "var(--good)" }}>
+                          {s.google_reality.indexed_pages === 0
+                            ? "no pages in Google's index"
+                            : `${s.google_reality.indexed_pages} pages indexed`}
+                        </span>
+                        {s.google_reality.brand_found === false && (
+                          <span className="text-[var(--attn)]">not found for its own name</span>
+                        )}
+                        {s.google_reality.brand_position != null && (
+                          <span className="text-[var(--good)]">#{s.google_reality.brand_position} for its own name</span>
+                        )}
+                        {s.google_reality.domain_age_days != null && (
+                          <span style={{ color: s.google_reality.domain_age_days < 180 ? "var(--improve)" : "var(--muted)" }}>
+                            domain {s.google_reality.domain_age_days < 90
+                              ? `${s.google_reality.domain_age_days} days old`
+                              : s.google_reality.domain_age_days < 730
+                                ? `${Math.round(s.google_reality.domain_age_days / 30)} months old`
+                                : `${Math.floor(s.google_reality.domain_age_days / 365)} years old`}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {s.google_reality?.pending && (
+                    <p className="mt-2 text-[11px] text-[var(--faint)]">
+                      {s.google_reality.note}
+                      {s.google_reality.domain_age_days != null ? ` · domain registered ${s.google_reality.domain_registered}` : ""}.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

@@ -38,6 +38,8 @@ Findings (client-safe): ${data.findings
     .map((f) => `[${f.severity}/${f.category}] ${f.title}: ${f.client_summary}`)
     .join("\n")}
 ${data.design ? `Design review ${data.design.points}/24: ${data.design.subscores.map((s) => `${s.area} ${s.points}/${s.max} (${s.note})`).join(" · ")}` : "Design review pending."}
+${data.google_reality ? `Google reality (verified today): ${data.google_reality}
+If this shows the site is effectively invisible on Google (no pages listed, or not found for its own name), the lead and closing MUST centre on that: a ready site nobody can find yet. Do not praise visibility the site does not have.` : ""}
 Clearest-gap candidates (verified numbers, choose AT MOST one, never alter the numbers, or return null if none is persuasive):
 ${data.gapCandidates.length ? data.gapCandidates.map((g, i) => `${i}: ${g.label_a} = ${g.value_a} vs ${g.label_b} = ${g.value_b}`).join("\n") : "none"}
 
@@ -108,7 +110,8 @@ export async function writeNarrative(data) {
 }
 
 // Deterministic, verified gap candidates — the writer chooses and phrases, never invents.
-export function gapCandidates(ctx) {
+export function gapCandidates(ctx, googleReality) {
+  const gr = googleReality;
   const out = [];
   const dom = ctx.dom ?? {}, probes = ctx.probes ?? {};
   const { total = 0, noAlt = 0 } = dom.imgStats ?? {};
@@ -128,5 +131,13 @@ export function gapCandidates(ctx) {
       label_a: "Pages built on the website", value_a: probes.sitemap.count, sub_a: "real work already done",
       label_b: "Pages that introduce themselves to Google", value_b: 0, sub_b: "search snippets left to chance",
     });
+  if (gr && !gr.pending && !gr.error && typeof gr.indexed_pages === "number") {
+    const built = Math.max(probes.sitemap?.count ?? 0, (dom.internalPaths ?? []).length + 1);
+    if (built >= 3 && gr.indexed_pages < built / 2)
+      out.unshift({
+        label_a: "Pages the website has built", value_a: built, sub_a: "real work already done",
+        label_b: "Pages Google currently lists", value_b: gr.indexed_pages, sub_b: "what a searcher can ever find",
+      });
+  }
   return out.slice(0, 3);
 }

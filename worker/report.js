@@ -46,6 +46,20 @@ export function buildReportHtml(run, findings) {
     .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact)
     .slice(0, 6);
   const gapMax = gap ? Math.max(gap.value_a, gap.value_b, 1) : 1;
+  const gr = s.google_reality;
+  const realityLine = gr && !gr.pending && !gr.error && typeof gr.indexed_pages === "number"
+    ? `<div class="reality"><span class="lbl">GOOGLE TODAY</span>${
+        gr.indexed_pages === 0
+          ? "Google currently lists <b>none</b> of this site's pages"
+          : `Google currently lists <b>${gr.indexed_pages}</b> of this site's pages`
+      }${
+        gr.brand_found === false ? " &middot; a search for the business's own name does not find this site" :
+        gr.brand_position ? ` &middot; found at position ${gr.brand_position} for its own name` : ""
+      }${
+        gr.domain_age_days != null && gr.domain_age_days < 180
+          ? ` &middot; the web address is ${gr.domain_age_days} days old` : ""
+      }.</div>`
+    : "";
 
   const areaRow = (a, i) => `
     <div class="row">
@@ -104,6 +118,9 @@ export function buildReportHtml(run, findings) {
   .overall .right { flex:1 1 auto; }
   .overall .lead { font-family:var(--serif); font-size:11.2pt; color:var(--ink); line-height:1.3; }
   .scale { margin-top:3.4mm; }
+  .reality { margin-top:2.8mm; font-size:8pt; line-height:1.45; color:var(--ink);
+    border-top:.5pt solid var(--hair); padding-top:2mm; }
+  .reality .lbl { font-size:6.6pt; letter-spacing:.1em; color:var(--muted); display:block; margin-bottom:.8mm; }
   .scale .bands { display:flex; height:3.4mm; gap:.7mm; }
   .scale .bands span { flex:1 1 0; background:var(--track); }
   .scale .marks { display:flex; margin-top:1.1mm; font-size:6.4pt; letter-spacing:.05em;
@@ -177,6 +194,7 @@ export function buildReportHtml(run, findings) {
       <div class="marks">${BANDS.map((b) =>
         `<span${b === s.band ? ` style="color:${BAND_COLOR[b]};font-weight:600"` : ""}>${b}</span>`).join("")}</div>
     </div>
+    ${realityLine}
   </div>
 </div>
 

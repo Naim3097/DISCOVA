@@ -7,6 +7,7 @@ import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor } from "./scoring.js";
 import { surveySite } from "./survey.js";
 import { intelligenceLayer, buildPriorities, buildPlan } from "./intelligence.js";
+import { googleReality, realityForWriter } from "./reality.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
@@ -387,6 +388,9 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     scores.intelligence = intel;
   }
 
+  await onStatus("verifying");
+  scores.google_reality = await googleReality(ctx, { log }).catch((e) => ({ error: e.message }));
+
   await onStatus("writing");
   const narrative = await writeNarrative({
     domain,
@@ -395,7 +399,8 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
       severity: f.severity, category: f.category, title: f.title, client_summary: f.client_summary,
     })),
     design,
-    gapCandidates: gapCandidates(ctx),
+    google_reality: realityForWriter(scores.google_reality),
+    gapCandidates: gapCandidates(ctx, scores.google_reality),
   }).catch((e) => { log("writer threw: " + e.message); return { __error: "threw: " + (e.stack ?? e.message).slice(0, 300) }; });
 
   if (narrative?.__error) {
@@ -413,7 +418,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
       const n = narrative.area_notes?.[area.key];
       if (n && n.length > 12) area.note = n;
     }
-    const cands = gapCandidates(ctx);
+    const cands = gapCandidates(ctx, scores.google_reality);
     if (narrative.gap_index != null && cands[narrative.gap_index]) {
       scores.clearest_gap = { ...cands[narrative.gap_index], note: narrative.gap_note ?? "" };
     }
