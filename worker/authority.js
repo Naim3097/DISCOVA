@@ -42,6 +42,7 @@ export async function authorityLite(ctx, { search, log }) {
 
   if (search) {
     try {
+      await new Promise((res) => setTimeout(res, 600)); // pace behind the reality queries
       const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
       const brand = title.length >= 3 && title.length <= 60 ? title : domain.split(".")[0];
       const res = await search(`"${brand}" -site:${domain}`);

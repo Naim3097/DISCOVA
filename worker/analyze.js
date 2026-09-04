@@ -426,7 +426,9 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     }
     log(`visibility score: readiness ${scores.readiness} x60% + presence ${presence.score} x40% = ${scores.overall}`);
   } else {
-    scores.score_note = "score is site readiness only; Google presence joins it when the search key is set";
+    scores.score_note = scores.google_reality?.error
+      ? `Google presence could not be measured this run (${scores.google_reality.error}); the score is site readiness only`
+      : "score is site readiness only; Google presence joins it when the search key is set";
   }
   scores.diagnosis = diagnose(scores.google_reality, findings);
   log(`diagnosis: ${scores.diagnosis.code} - ${scores.diagnosis.label}`);

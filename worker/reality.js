@@ -10,14 +10,22 @@ const CSE = "https://www.googleapis.com/customsearch/v1";
 // Primary index source: serper.dev (real Google results; Google deprecated
 // whole-web Programmable Search Engines, closing the official free route).
 // gl=my so results match what Malaysian searchers actually see.
-async function serperQuery(q, key) {
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+async function serperQuery(q, key, attempt = 0) {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     signal: AbortSignal.timeout(15_000),
     headers: { "X-API-KEY": key, "content-type": "application/json" },
     body: JSON.stringify({ q, gl: "my", num: 10 }),
   });
-  if (!res.ok) throw new Error(`serper ${res.status}`);
+  if (!res.ok) {
+    if ((res.status === 429 || res.status >= 500) && attempt === 0) {
+      await sleep(1500);
+      return serperQuery(q, key, 1);
+    }
+    throw new Error(`serper ${res.status}`);
+  }
   const j = await res.json();
   const items = (j.organic ?? []).map((o) => ({ link: o.link }));
   // serper returns no total count: a full page of results means "at least this many".
@@ -140,6 +148,7 @@ export async function googleReality(ctx, { log }) {
     const candidates = deriveServiceQueries(ctx);
     out.service_queries = [];
     for (const q of candidates) {
+      await sleep(600);
       const sres = await search(q);
       const spos = sres.items.findIndex((i) => {
         try { return new URL(i.link).hostname.replace(/^www\./, "").endsWith(domain); } catch { return false; }
