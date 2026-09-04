@@ -126,7 +126,7 @@ export async function googleReality(ctx, { log }) {
     // only URLs actually on this domain count as indexed pages.
     const own = site.items.filter((i) => {
       try {
-        const h = new URL(i.link).hostname.replace(/^www./, "");
+        const h = new URL(i.link).hostname.replace(/^www\./, "");
         return h === domain || h.endsWith("." + domain);
       } catch { return false; }
     });
@@ -185,9 +185,9 @@ export function realityForWriter(gr) {
   if (svc && svc.length) {
     const hits = svc.filter((s) => s.position != null);
     if (hits.length === 0)
-      bits.push(`tested against real customer searches from its own wording (${svc.map((s) => `"${s.q}"`).join(", ")}), it appears for none`);
+      bits.push(`tested against ${svc.length} searches real customers would use, it appears for none (never name or guess the phrases tested)`);
     else
-      bits.push(`it appears for ${hits.length} of ${svc.length} real customer searches tested (${hits.map((s) => `"${s.q}" at position ${s.position}`).join(", ")})`);
+      bits.push(`it appears in ${hits.length} of ${svc.length} searches real customers would use, though not always prominently (never name or guess the phrases tested)`);
   } else if (svc) {
     bits.push("the page offers no service phrases a customer would search, so there was nothing to test it against");
   }

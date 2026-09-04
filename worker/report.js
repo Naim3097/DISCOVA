@@ -62,10 +62,10 @@ export function buildReportHtml(run, findings) {
         s.score_formula ? ` &middot; score = 60% readiness (${s.readiness}) + 40% Google presence (${s.presence})` : ""
       }${
         Array.isArray(gr.service_queries) && gr.service_queries.length
-          ? ` &middot; customer searches: ${gr.service_queries.map((q) => `&ldquo;${esc(q.q)}&rdquo; ${q.position != null ? "#" + q.position : "not in top 10"}`).join(", ")}`
+          ? ` &middot; appears in ${gr.service_queries.filter((q) => q.position != null).length} of ${gr.service_queries.length} searches a customer would actually use`
           : ""
       }${
-        s.diagnosis && s.diagnosis.code !== "pending" ? `<br><b>${esc(s.diagnosis.label)}.</b> ${esc(s.diagnosis.detail)}` : ""
+        s.diagnosis && s.diagnosis.code !== "pending" ? `<br><b>${esc(s.diagnosis.label)}.</b> ${esc(s.diagnosis.client ?? "")}` : ""
       }.</div>`
     : "";
 
