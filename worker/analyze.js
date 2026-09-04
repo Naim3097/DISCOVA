@@ -7,7 +7,9 @@ import { writeNarrative, gapCandidates } from "./writer.js";
 import { CATS, scoreRun, rollUp, deductionFor, bandForScore } from "./scoring.js";
 import { surveySite } from "./survey.js";
 import { intelligenceLayer, buildPriorities, buildPlan } from "./intelligence.js";
-import { googleReality, realityForWriter, presenceScore } from "./reality.js";
+import { googleReality, realityForWriter, presenceScore, makeSearch, funnelFrom } from "./reality.js";
+import { authorityLite } from "./authority.js";
+import { diagnose } from "./diagnose.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
@@ -328,9 +330,19 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   if (design) log(`design review: ${design.points}/24`);
   else log("design review pending (no vision available)");
 
+  const gr = await googleReality(ctx, { log }).catch((e) => ({ error: e.message }));
+  const auth = await authorityLite(ctx, { search: makeSearch(), log }).catch(() => ({ findings: [] }));
+  for (const f of auth.findings ?? []) findings.push({ ...f, category: CATS.A, score_impact: 0 });
+
   await onStatus("scoring");
-  const pendingCats = design ? [CATS.A] : [CATS.D, CATS.A];
-  const injected = design ? { [CATS.D]: design.score } : {};
+  const pendingCats = [
+    ...(design ? [] : [CATS.D]),
+    ...(auth.score != null ? [] : [CATS.A]),
+  ];
+  const injected = {
+    ...(design ? { [CATS.D]: design.score } : {}),
+    ...(auth.score != null ? { [CATS.A]: auth.score } : {}),
+  };
   const coverage = Object.fromEntries(
     Object.entries(REGISTER).map(([cat, r]) => [
       cat,
@@ -389,7 +401,11 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   }
 
   await onStatus("verifying");
-  scores.google_reality = await googleReality(ctx, { log }).catch((e) => ({ error: e.message }));
+  scores.google_reality = gr;
+  if (auth.opr != null || auth.mentions != null) {
+    scores.authority = { open_pagerank: auth.opr ?? null, external_mentions: auth.mentions ?? null };
+  }
+  scores.funnel = funnelFrom(ctx, gr);
 
   // The Visibility Score merges what the site IS with whether Google SHOWS it:
   // 60% on-site readiness, 40% observed presence. Without a search key the
@@ -412,6 +428,8 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   } else {
     scores.score_note = "score is site readiness only; Google presence joins it when the search key is set";
   }
+  scores.diagnosis = diagnose(scores.google_reality, findings);
+  log(`diagnosis: ${scores.diagnosis.code} - ${scores.diagnosis.label}`);
 
   await onStatus("writing");
   const narrative = await writeNarrative({
@@ -422,6 +440,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     })),
     design,
     google_reality: realityForWriter(scores.google_reality),
+    diagnosis: scores.diagnosis ? `${scores.diagnosis.label}. ${scores.diagnosis.detail}` : null,
     gapCandidates: gapCandidates(ctx, scores.google_reality),
   }).catch((e) => { log("writer threw: " + e.message); return { __error: "threw: " + (e.stack ?? e.message).slice(0, 300) }; });
 

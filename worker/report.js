@@ -60,6 +60,12 @@ export function buildReportHtml(run, findings) {
           ? ` &middot; the web address is ${gr.domain_age_days} days old` : ""
       }${
         s.score_formula ? ` &middot; score = 60% readiness (${s.readiness}) + 40% Google presence (${s.presence})` : ""
+      }${
+        Array.isArray(gr.service_queries) && gr.service_queries.length
+          ? ` &middot; customer searches: ${gr.service_queries.map((q) => `&ldquo;${esc(q.q)}&rdquo; ${q.position != null ? "#" + q.position : "not in top 10"}`).join(", ")}`
+          : ""
+      }${
+        s.diagnosis && s.diagnosis.code !== "pending" ? `<br><b>${esc(s.diagnosis.label)}.</b> ${esc(s.diagnosis.detail)}` : ""
       }.</div>`
     : "";
 

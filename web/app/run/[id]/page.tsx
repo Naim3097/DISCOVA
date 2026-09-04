@@ -144,6 +144,15 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             {settled && s.narrative?.lead && (
               <p className="serif italic text-[17px] text-[var(--ink)] mt-3 max-w-xl">{s.narrative.lead}</p>
             )}
+            {settled && s.diagnosis && s.diagnosis.code !== "pending" && (
+              <p className="mt-3 text-[13px]">
+                <span className="font-semibold px-2 py-0.5 rounded border border-[var(--rule)] mr-2"
+                  style={{ color: s.diagnosis.code === "visible" ? "var(--good)" : "var(--attn)" }}>
+                  {s.diagnosis.label}
+                </span>
+                <span className="text-[var(--muted)]">{s.diagnosis.detail}</span>
+              </p>
+            )}
             {settled && (
               <div className="mt-6 flex items-start gap-8 flex-wrap">
                 <div>
@@ -207,6 +216,34 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                           </span>
                         )}
                       </p>
+                      {Array.isArray(s.funnel) && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {s.funnel.map((st: any) => (
+                            <span key={st.key}
+                              className="text-[9px] font-mono uppercase tracking-wide px-2 py-1 rounded border"
+                              style={{
+                                borderColor: "var(--hair)",
+                                color: st.state === "pass" ? "var(--good)" : st.state === "fail" ? "var(--attn)" : "var(--faint)",
+                              }}>
+                              {st.state === "pass" ? "✓" : st.state === "fail" ? "✗" : "?"} {st.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {Array.isArray(s.google_reality.service_queries) && s.google_reality.service_queries.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-[10px] tracking-[.12em] uppercase text-[var(--muted)] mb-1">Customer searches tested</p>
+                          {s.google_reality.service_queries.map((sq: any) => (
+                            <p key={sq.q} className="text-[12px] flex justify-between gap-3 py-0.5">
+                              <span className="text-[var(--ink)] truncate">&ldquo;{sq.q}&rdquo;</span>
+                              <span className="shrink-0 tabular-nums"
+                                style={{ color: sq.position != null ? "var(--good)" : "var(--attn)" }}>
+                                {sq.position != null ? `#${sq.position}` : "not in top 10"}
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {s.google_reality?.pending && (

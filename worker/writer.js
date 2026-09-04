@@ -38,6 +38,7 @@ Findings (client-safe): ${data.findings
     .map((f) => `[${f.severity}/${f.category}] ${f.title}: ${f.client_summary}`)
     .join("\n")}
 ${data.design ? `Design review ${data.design.points}/24: ${data.design.subscores.map((s) => `${s.area} ${s.points}/${s.max} (${s.note})`).join(" · ")}` : "Design review pending."}
+${data.diagnosis ? `Visibility diagnosis (deterministic, from verified evidence): ${data.diagnosis}\nThe lead and closing must agree with this diagnosis.` : ""}
 ${data.google_reality ? `Google reality (verified today): ${data.google_reality}
 If this shows the site is effectively invisible on Google (no pages listed, or not found for its own name), the lead and closing MUST centre on that: a ready site nobody can find yet. Do not praise visibility the site does not have.` : ""}
 Clearest-gap candidates (verified numbers, choose AT MOST one, never alter the numbers, or return null if none is persuasive):

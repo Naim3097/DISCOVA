@@ -58,20 +58,52 @@ async function domainAgeDays(domain) {
   return null;
 }
 
-export async function googleReality(ctx, { log }) {
-  const domain = ctx.domain.replace(/^www\./, "");
+export function makeSearch() {
   const serper = process.env.SERPER_API_KEY;
   const key = process.env.GOOGLE_CSE_KEY, cx = process.env.GOOGLE_CSE_CX;
-  const search = serper
+  return serper
     ? (q) => serperQuery(q, serper)
     : key && cx
       ? (q) => cseAdapter(q, key, cx)
       : null;
+}
+
+// The searches a real customer would type, derived from the site's own words:
+// title segments after the brand, and non-generic headline text.
+export function deriveServiceQueries(ctx) {
+  const domain = (ctx.domain ?? "").replace(/^www\./, "");
+  const brandLabel = domain.split(".")[0].toLowerCase();
+  const generic = /^(home|welcome( to)?|about( us)?|services|our services|contact( us)?|utama|laman utama|laman rasmi|selamat datang|official( website| site)?|website|index)$/i;
+  const cands = [];
+  const segs = (ctx.dom?.title ?? "").split(/[|\-–—·:]/).map((s) => s.trim()).filter(Boolean);
+  cands.push(...segs.slice(1));
+  cands.push(...(ctx.dom?.h1s ?? []));
+  const seen = new Set();
+  const out = [];
+  for (const c of cands) {
+    const q = (c ?? "").replace(/\s+/g, " ").trim();
+    const key2 = q.toLowerCase();
+    if (q.length < 8 || q.length > 70) continue;
+    if (q.split(" ").length < 2) continue;
+    if (generic.test(q)) continue;
+    if (key2.replace(/[^a-z0-9]/g, "").includes(brandLabel) && q.split(" ").length < 3) continue;
+    if (seen.has(key2)) continue;
+    seen.add(key2);
+    out.push(q.slice(0, 70));
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+export async function googleReality(ctx, { log }) {
+  const domain = ctx.domain.replace(/^www\./, "");
+  const search = makeSearch();
   const out = { checked_at: new Date().toISOString().slice(0, 10) };
 
   const age = await domainAgeDays(ctx.domain);
   if (age) { out.domain_registered = age.registered; out.domain_age_days = age.age_days; }
 
+  out.service_query_candidates = deriveServiceQueries(ctx);
   if (!search) {
     out.pending = true;
     out.note = "Google index data arrives when SERPER_API_KEY is set";
@@ -105,6 +137,19 @@ export async function googleReality(ctx, { log }) {
     out.brand_found = pos !== -1;
     if (pos !== -1) out.brand_position = pos + 1;
 
+    const candidates = deriveServiceQueries(ctx);
+    out.service_queries = [];
+    for (const q of candidates) {
+      const sres = await search(q);
+      const spos = sres.items.findIndex((i) => {
+        try { return new URL(i.link).hostname.replace(/^www\./, "").endsWith(domain); } catch { return false; }
+      });
+      out.service_queries.push({ q, position: spos === -1 ? null : spos + 1 });
+    }
+    if (out.service_queries.length)
+      log(`google reality: service queries ${out.service_queries.map((s) => `"${s.q}" ${s.position ? "#" + s.position : "not top 10"}`).join(" | ")}`);
+    else log("google reality: no service phrases derivable from the page itself");
+
     out.invisible = out.indexed_pages === 0;
     out.outranked_for_own_name = !out.invisible && !out.brand_found;
     log(`google reality: ${out.indexed_pages} pages indexed, brand "${brand}" ${out.brand_found ? "found #" + out.brand_position : "NOT found in top 10"}`);
@@ -127,6 +172,16 @@ export function realityForWriter(gr) {
   if (gr.domain_age_days != null && gr.domain_age_days < 180) {
     bits.push(`the web address is only ${gr.domain_age_days} days old`);
   }
+  const svc = gr.service_queries ?? null;
+  if (svc && svc.length) {
+    const hits = svc.filter((s) => s.position != null);
+    if (hits.length === 0)
+      bits.push(`tested against real customer searches from its own wording (${svc.map((s) => `"${s.q}"`).join(", ")}), it appears for none`);
+    else
+      bits.push(`it appears for ${hits.length} of ${svc.length} real customer searches tested (${hits.map((s) => `"${s.q}" at position ${s.position}`).join(", ")})`);
+  } else if (svc) {
+    bits.push("the page offers no service phrases a customer would search, so there was nothing to test it against");
+  }
   return bits.join("; ") + ".";
 }
 
@@ -139,15 +194,39 @@ export function presenceScore(gr, builtPages) {
   const built = Math.max(builtPages ?? 1, 1);
   const base = Math.min(built, 10);
   const indexRatio = Math.min(1, gr.indexed_pages / base);
-  const indexPts = Math.round(indexRatio * 50);
+  const indexPts = Math.round(indexRatio * 40);
   const namePts = gr.brand_position != null
-    ? (gr.brand_position <= 3 ? 50 : 35)
+    ? (gr.brand_position <= 3 ? 40 : 28)
     : 0;
+  const svc = gr.service_queries ?? null;
+  const hits = svc ? svc.filter((s) => s.position != null).length : null;
+  const svcPts = hits == null ? null : hits >= 2 ? 20 : hits === 1 ? 14 : 0;
+  const score = svcPts == null
+    ? Math.round(((indexPts + namePts) / 80) * 100)
+    : Math.min(100, indexPts + namePts + svcPts);
   return {
-    score: Math.min(100, indexPts + namePts),
+    score,
     components: {
-      indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/50`,
-      own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/50` : "not found in top 10 -> 0/50",
+      indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/40`,
+      own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/40` : "not found in top 10 -> 0/40",
+      searches: svcPts == null ? "not measured" : `found for ${hits} of ${svc.length} customer searches -> ${svcPts}/20`,
     },
   };
+}
+
+// Crawlable -> Indexable -> Indexed -> Found by name -> Found for searches.
+export function funnelFrom(ctx, gr) {
+  const robots = ctx.probes?.robots?.body ?? "";
+  const blockedAll = /user-agent:\s*\*[\s\S]{0,300}?disallow:\s*\/\s*$/im.test(robots);
+  const homeCode = ctx.probes?.home?.code ?? 0;
+  const noindex = /<meta[^>]+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(ctx.probes?.home?.body ?? "");
+  const st = (v) => (v === null ? "unknown" : v ? "pass" : "fail");
+  const svc = gr?.service_queries ?? null;
+  return [
+    { key: "crawlable", label: "Crawlable", state: st(!(blockedAll || homeCode >= 400 || homeCode === 0)) },
+    { key: "indexable", label: "Indexable", state: st(!noindex) },
+    { key: "indexed", label: "Indexed", state: gr?.pending || gr?.error ? "unknown" : st((gr?.indexed_pages ?? 0) > 0) },
+    { key: "name", label: "Found by name", state: gr?.pending || gr?.error ? "unknown" : st(gr?.brand_found === true) },
+    { key: "searches", label: "Found for searches", state: !svc || gr?.pending || gr?.error ? "unknown" : st(svc.some((s) => s.position != null)) },
+  ];
 }
