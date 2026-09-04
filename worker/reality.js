@@ -82,8 +82,16 @@ export async function googleReality(ctx, { log }) {
 
   try {
     const site = await search(`site:${domain}`);
-    out.indexed_pages = site.total;
-    out.indexed_at_least = !!site.page_full; // true = "10+", the count is a floor not a total
+    // Google substitutes general results when a site: query finds little -
+    // only URLs actually on this domain count as indexed pages.
+    const own = site.items.filter((i) => {
+      try {
+        const h = new URL(i.link).hostname.replace(/^www./, "");
+        return h === domain || h.endsWith("." + domain);
+      } catch { return false; }
+    });
+    out.indexed_pages = own.length;
+    out.indexed_at_least = own.length >= 10; // full page of OWN results = "10+", a floor
 
     // Brand = the human name the site gives itself, falling back to the domain label.
     const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
