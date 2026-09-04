@@ -118,7 +118,7 @@ export async function googleReality(ctx, { log }) {
     log("google reality: index check pending (no search key)");
     return out;
   }
-  out.source = serper ? "serper.dev (Google results)" : "Google Custom Search";
+  out.source = process.env.SERPER_API_KEY ? "serper.dev (Google results)" : "Google Custom Search";
 
   try {
     const site = await search(`site:${domain}`);
