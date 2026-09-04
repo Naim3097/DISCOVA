@@ -77,7 +77,7 @@ export function scoreRun(findings, { pendingCats = [], injected = {}, coverage =
 
 // Roll the 9 internal categories up to the client-facing areas (framework §7),
 // weights preserved inside each area.
-const AREA_MAP = [
+export const AREA_MAP = [
   { key: "google_visibility", label: "Google Visibility", cats: [CATS.K, CATS.S, CATS.A] },
   { key: "website_content", label: "Website Content", cats: [CATS.C, CATS.O] },
   { key: "user_experience", label: "User Experience", cats: [CATS.U] },

@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { AREA_MAP } from "./scoring.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LOGO_B64 = readFileSync(join(here, "leanx-logo.png")).toString("base64");
@@ -41,10 +42,27 @@ export function buildReportHtml(run, findings) {
   const date = new Date(run.finished_at ?? run.started_at).toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
-  const recs = [...(findings ?? [])]
-    .filter((f) => f.client_summary && !String(f.check_id ?? "").startsWith("inv-"))
-    .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact)
-    .slice(0, 6);
+  // Recommendations sample the WHOLE business, not one silo: severity order,
+  // but at most 2 per client-facing area; leftover slots backfill by severity
+  // so the list still reaches six when the findings allow.
+  const areaOfCat = Object.fromEntries(AREA_MAP.flatMap((a) => a.cats.map((c) => [c, a.key])));
+  const eligible = [...(findings ?? [])]
+    .filter((f) => f.client_summary && !/^(inv|intel)-/.test(String(f.check_id ?? "")))
+    .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9) || a.score_impact - b.score_impact);
+  const perArea = {};
+  const recs = [];
+  const skipped = [];
+  for (const f of eligible) {
+    const area = areaOfCat[f.category] ?? "other";
+    if ((perArea[area] ?? 0) < 2 && recs.length < 6) {
+      perArea[area] = (perArea[area] ?? 0) + 1;
+      recs.push(f);
+    } else skipped.push(f);
+  }
+  for (const f of skipped) {
+    if (recs.length >= 6) break;
+    recs.push(f);
+  }
   const gapMax = gap ? Math.max(gap.value_a, gap.value_b, 1) : 1;
   const gr = s.google_reality;
   const realityLine = gr && !gr.pending && !gr.error && typeof gr.indexed_pages === "number"
