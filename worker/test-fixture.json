@@ -6,24 +6,88 @@
     "started_at": "2026-08-20T03:00:00Z",
     "finished_at": "2026-08-20T03:03:00Z",
     "scores": {
-      "overall": 54,
+      "overall": 64,
       "band": "Developing",
       "areas": [
-        {"key":"google_visibility","label":"Google Visibility","score":47,"status":"Needs improvement","note":"Well targeted, but one page can only compete for one kind of search."},
-        {"key":"website_content","label":"Website Content","score":45,"status":"Needs improvement","note":"Your weakest area. Three products are named; none is explained."},
-        {"key":"user_experience","label":"User Experience","score":81,"status":"Good","note":"Every enquiry button opens WhatsApp with the right question already written."},
-        {"key":"technical_foundation","label":"Technical Foundation","score":56,"status":"Fair","note":"Properly set up, but slow to respond and living at two addresses at once."},
-        {"key":"local_search","label":"Local Search","score":58,"status":"Fair","note":"Petaling Jaya is named and correctly marked up for Google."},
-        {"key":"design_brand","label":"Design & Brand","score":81,"status":"Good","note":"Your strongest area, and the best design result we have recorded."}
+        {
+          "key": "google_visibility",
+          "label": "Google Visibility",
+          "score": 47,
+          "status": "Needs improvement",
+          "note": "Well targeted, but one page can only compete for one kind of search."
+        },
+        {
+          "key": "website_content",
+          "label": "Website Content",
+          "score": 45,
+          "status": "Needs improvement",
+          "note": "Your weakest area. Three products are named; none is explained."
+        },
+        {
+          "key": "user_experience",
+          "label": "User Experience",
+          "score": 81,
+          "status": "Good",
+          "note": "Every enquiry button opens WhatsApp with the right question already written."
+        },
+        {
+          "key": "technical_foundation",
+          "label": "Technical Foundation",
+          "score": 56,
+          "status": "Fair",
+          "note": "Properly set up, but slow to respond and living at two addresses at once."
+        },
+        {
+          "key": "local_search",
+          "label": "Local Search",
+          "score": 58,
+          "status": "Fair",
+          "note": "Petaling Jaya is named and correctly marked up for Google."
+        },
+        {
+          "key": "design_brand",
+          "label": "Design & Brand",
+          "score": 81,
+          "status": "Good",
+          "note": "Your strongest area, and the best design result we have recorded."
+        }
       ],
       "design_subscores": [
-        {"area":"Imagery & Assets","points":4,"max":5,"note":"A sharp, professional photograph of a real consultant - but it is the only image on the site."},
-        {"area":"Typography","points":4,"max":4,"note":"A full pass. One well-chosen typeface, clear hierarchy, nothing shouting."},
-        {"area":"Colour & Brand","points":4.5,"max":5,"note":"A disciplined navy and teal that anyone would remember; five button styles is a few too many."},
-        {"area":"Hero Section","points":4,"max":5,"note":"Static, calm and readable, with a person in it. Two buttons where one would land harder."},
-        {"area":"Layout & Consistency","points":3,"max":5,"note":"Sound buyer order, but recruitment sits in front of the sell and there is no proof section at all."}
+        {
+          "area": "Imagery & Assets",
+          "points": 4,
+          "max": 5,
+          "note": "A sharp, professional photograph of a real consultant - but it is the only image on the site."
+        },
+        {
+          "area": "Typography",
+          "points": 4,
+          "max": 4,
+          "note": "A full pass. One well-chosen typeface, clear hierarchy, nothing shouting."
+        },
+        {
+          "area": "Colour & Brand",
+          "points": 4.5,
+          "max": 5,
+          "note": "A disciplined navy and teal that anyone would remember; five button styles is a few too many."
+        },
+        {
+          "area": "Hero Section",
+          "points": 4,
+          "max": 5,
+          "note": "Static, calm and readable, with a person in it. Two buttons where one would land harder."
+        },
+        {
+          "area": "Layout & Consistency",
+          "points": 3,
+          "max": 5,
+          "note": "Sound buyer order, but recruitment sits in front of the sell and there is no proof section at all."
+        }
       ],
-      "design_total": {"points": 19.5, "max": 24},
+      "design_total": {
+        "points": 19.5,
+        "max": 24
+      },
       "strengths": [
         "Every enquiry button opens WhatsApp with a contextual pre-filled message - better than any other site reviewed",
         "One typeface (Inter) used consistently with clear hierarchy; nothing shouting",
@@ -31,22 +95,108 @@
         "Petaling Jaya named, with FinancialService and PostalAddress markup correctly in place"
       ],
       "clearest_gap": {
-        "label_a": "Products you advise on", "sub_a": "medical card, hibah, critical illness", "value_a": 3,
-        "label_b": "Pages explaining them", "sub_b": "that someone researching can find", "value_b": 0,
+        "label_a": "Products you advise on",
+        "sub_a": "medical card, hibah, critical illness",
+        "value_a": 3,
+        "label_b": "Pages explaining them",
+        "sub_b": "that someone researching can find",
+        "value_b": 0,
         "note": "Nobody buys takaful on impulse. They search what hibah means, what a medical card covers, and what happens if they claim - and none of those searches can currently find you."
+      },
+      "readiness": 54,
+      "presence": 80,
+      "score_formula": "60% site readiness + 40% observed Google presence",
+      "google_reality": {
+        "checked_at": "2026-09-03",
+        "indexed_pages": 10,
+        "indexed_at_least": true,
+        "brand_query": "Takaful Solutions Malaysia",
+        "brand_found": true,
+        "brand_position": 2,
+        "domain_age_days": 55,
+        "domain_registered": "2026-07-10",
+        "service_queries": [
+          {
+            "q": "takaful keluarga terbaik malaysia",
+            "position": 7
+          },
+          {
+            "q": "perlindungan takaful perniagaan berkualiti",
+            "position": null
+          },
+          {
+            "q": "ejen takaful bertauliah kuala lumpur",
+            "position": null
+          }
+        ]
+      },
+      "diagnosis": {
+        "code": "weak_rankings",
+        "label": "Visible but outgunned",
+        "detail": "The site appears for some real searches but not prominently. It is in the game; authority and content depth decide how high it climbs."
       }
     }
   },
   "findings": [
-    {"severity":"high","title":"Three products named, none explained","client_summary":"Nobody buys takaful on impulse. The questions people research before choosing an adviser currently have no page to land on.","score_impact":-15},
-    {"severity":"high","title":"One page competes for every search","client_summary":"A single page can only compete for one kind of search, however good it is.","score_impact":-15},
-    {"severity":"high","title":"No proof anywhere - no testimonials, licence, or track record","client_summary":"There is nowhere a visitor can see that anyone has trusted you before. For a decision this personal, that is the missing piece.","score_impact":-15},
-    {"severity":"medium","title":"Site answers at two addresses with no redirect","client_summary":"Your site exists at two addresses at once, so Google has to guess which is real - and the value splits between them.","score_impact":-8},
-    {"severity":"medium","title":"Caching disabled; slow first response","client_summary":"Pages take noticeably longer to start loading than they should, and nothing is stored for repeat visitors.","score_impact":-8},
-    {"severity":"medium","title":"No social share preview card","client_summary":"When your link is shared on WhatsApp, no preview card appears - every share is less persuasive than it should be.","score_impact":-8},
-    {"severity":"medium","title":"Google Business Profile could not be confirmed","client_summary":"Whether you appear on the Google map for advisers near you could not be confirmed from outside.","score_impact":-8},
-    {"severity":"low","title":"Recruitment section sits before the closing call to action","client_summary":"Someone weighing protection for their family meets a job advert before they reach your closing message.","score_impact":-3},
-    {"severity":"medium","title":"Only one photograph on the entire site","client_summary":"One professional photo carries the whole brand; the sessions and people behind it have no visual presence.","score_impact":0},
-    {"severity":"low","title":"Five button styles for a handful of actions","client_summary":"Small inconsistencies in buttons make choosing feel harder than it should at the moment of action.","score_impact":0}
+    {
+      "severity": "high",
+      "title": "Three products named, none explained",
+      "client_summary": "Nobody buys takaful on impulse. The questions people research before choosing an adviser currently have no page to land on.",
+      "score_impact": -15
+    },
+    {
+      "severity": "high",
+      "title": "One page competes for every search",
+      "client_summary": "A single page can only compete for one kind of search, however good it is.",
+      "score_impact": -15
+    },
+    {
+      "severity": "high",
+      "title": "No proof anywhere - no testimonials, licence, or track record",
+      "client_summary": "There is nowhere a visitor can see that anyone has trusted you before. For a decision this personal, that is the missing piece.",
+      "score_impact": -15
+    },
+    {
+      "severity": "medium",
+      "title": "Site answers at two addresses with no redirect",
+      "client_summary": "Your site exists at two addresses at once, so Google has to guess which is real - and the value splits between them.",
+      "score_impact": -8
+    },
+    {
+      "severity": "medium",
+      "title": "Caching disabled; slow first response",
+      "client_summary": "Pages take noticeably longer to start loading than they should, and nothing is stored for repeat visitors.",
+      "score_impact": -8
+    },
+    {
+      "severity": "medium",
+      "title": "No social share preview card",
+      "client_summary": "When your link is shared on WhatsApp, no preview card appears - every share is less persuasive than it should be.",
+      "score_impact": -8
+    },
+    {
+      "severity": "medium",
+      "title": "Google Business Profile could not be confirmed",
+      "client_summary": "Whether you appear on the Google map for advisers near you could not be confirmed from outside.",
+      "score_impact": -8
+    },
+    {
+      "severity": "low",
+      "title": "Recruitment section sits before the closing call to action",
+      "client_summary": "Someone weighing protection for their family meets a job advert before they reach your closing message.",
+      "score_impact": -3
+    },
+    {
+      "severity": "medium",
+      "title": "Only one photograph on the entire site",
+      "client_summary": "One professional photo carries the whole brand; the sessions and people behind it have no visual presence.",
+      "score_impact": 0
+    },
+    {
+      "severity": "low",
+      "title": "Five button styles for a handful of actions",
+      "client_summary": "Small inconsistencies in buttons make choosing feel harder than it should at the moment of action.",
+      "score_impact": 0
+    }
   ]
 }
