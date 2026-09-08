@@ -103,6 +103,23 @@ export function deriveServiceQueries(ctx) {
   return out;
 }
 
+// The business's name, not the page's: prefer the title segment whose
+// letters match the domain label; never a generic like "Home".
+export function deriveBrand(ctx, domain) {
+  const label = domain.split(".")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+  const generic = /^(home|homepage|welcome|index|about( us)?|utama|laman utama|official( website)?)$/i;
+  const segs = (ctx.dom?.title ?? "").split(/[|\-–—·:]/).map((s) => s.trim())
+    .filter((s) => s.length >= 3 && s.length <= 60 && !generic.test(s));
+  let best = null;
+  for (const s of segs) {
+    const norm = s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (norm && (norm.includes(label) || label.includes(norm))) { best = s; break; }
+  }
+  const primary = best ?? segs[0] ?? domain.split(".")[0];
+  const primNorm = primary.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return { primary, fallback: primNorm === label ? null : domain.split(".")[0] };
+}
+
 export async function googleReality(ctx, { log }) {
   const domain = ctx.domain.replace(/^www\./, "");
   const search = makeSearch();
@@ -133,15 +150,18 @@ export async function googleReality(ctx, { log }) {
     out.indexed_pages = own.length;
     out.indexed_at_least = own.length >= 10; // full page of OWN results = "10+", a floor
 
-    // Brand = the human name the site gives itself, falling back to the domain label.
-    const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
-    const brand = title.length >= 3 && title.length <= 60 ? title : domain.split(".")[0];
-    out.brand_query = brand;
-    const bres = await search(`"${brand}"`);
-    const items = bres.items;
-    const pos = items.findIndex((i) => {
+    const findPos = (items) => items.findIndex((i) => {
       try { return new URL(i.link).hostname.replace(/^www\./, "") === domain; } catch { return false; }
     });
+    const { primary, fallback } = deriveBrand(ctx, domain);
+    out.brand_query = primary;
+    await sleep(600);
+    let pos = findPos((await search(`"${primary}"`)).items);
+    if (pos === -1 && fallback) {
+      await sleep(600);
+      out.brand_query = `${primary}" / "${fallback}`;
+      pos = findPos((await search(`"${fallback}"`)).items);
+    }
     out.brand_found = pos !== -1;
     if (pos !== -1) out.brand_position = pos + 1;
 
@@ -224,9 +244,29 @@ export function presenceScore(gr, builtPages) {
 }
 
 // Crawlable -> Indexable -> Indexed -> Found by name -> Found for searches.
+// True only when the "*" group itself carries "Disallow: /" - a block on
+// some OTHER bot (PetalBot, GPTBot...) must never read as blocking Google.
+export function robotsDisallowsAll(robots) {
+  let stars = false, collecting = false;
+  for (const raw of (robots ?? "").split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, "").trim();
+    const ua = line.match(/^user-agent:\s*(.+)$/i);
+    if (ua) {
+      if (!collecting) stars = false;
+      collecting = true;
+      if (ua[1].trim() === "*") stars = true;
+      continue;
+    }
+    if (!line) continue;
+    collecting = false;
+    if (stars && /^disallow:\s*\/$/i.test(line)) return true;
+  }
+  return false;
+}
+
 export function funnelFrom(ctx, gr) {
   const robots = ctx.probes?.robots?.body ?? "";
-  const blockedAll = /user-agent:\s*\*[\s\S]{0,300}?disallow:\s*\/\s*$/im.test(robots);
+  const blockedAll = robotsDisallowsAll(robots);
   const homeCode = ctx.probes?.home?.code ?? 0;
   const noindex = /<meta[^>]+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(ctx.probes?.home?.body ?? "");
   const st = (v) => (v === null ? "unknown" : v ? "pass" : "fail");

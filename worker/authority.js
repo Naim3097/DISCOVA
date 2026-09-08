@@ -3,6 +3,7 @@
 //  - Open PageRank (free API, OPR_API_KEY): a public domain-strength estimate.
 //  - External brand mentions: the brand searched on Google minus the site itself.
 // Both are approximations and say so; without the key the category stays pending.
+import { deriveBrand } from "./reality.js";
 
 export async function authorityLite(ctx, { search, log }) {
   const domain = ctx.domain.replace(/^www\./, "");
@@ -43,8 +44,7 @@ export async function authorityLite(ctx, { search, log }) {
   if (search) {
     try {
       await new Promise((res) => setTimeout(res, 600)); // pace behind the reality queries
-      const title = (ctx.dom?.title ?? "").split(/[|\-–—·:]/)[0].trim();
-      const brand = title.length >= 3 && title.length <= 60 ? title : domain.split(".")[0];
+      const brand = deriveBrand(ctx, domain).primary;
       const res = await search(`"${brand}" -site:${domain}`);
       const mentions = res.items.filter((i) => {
         try { return !new URL(i.link).hostname.replace(/^www\./, "").endsWith(domain); } catch { return false; }
