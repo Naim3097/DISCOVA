@@ -120,9 +120,9 @@ export function deriveBrand(ctx, domain) {
   return { primary, fallback: primNorm === label ? null : domain.split(".")[0] };
 }
 
-export async function googleReality(ctx, { log }) {
+export async function googleReality(ctx, { log, searchOverride = null }) {
   const domain = ctx.domain.replace(/^www\./, "");
-  const search = makeSearch();
+  const search = searchOverride ?? makeSearch(); // override exists for the self-test only
   const out = { checked_at: new Date().toISOString().slice(0, 10) };
 
   const age = await domainAgeDays(ctx.domain);
@@ -181,7 +181,7 @@ export async function googleReality(ctx, { log }) {
 
     out.invisible = out.indexed_pages === 0;
     out.outranked_for_own_name = !out.invisible && !out.brand_found;
-    log(`google reality: ${out.indexed_pages} pages indexed, brand "${brand}" ${out.brand_found ? "found #" + out.brand_position : "NOT found in top 10"}`);
+    log(`google reality: ${out.indexed_pages} pages indexed, brand "${out.brand_query}" ${out.brand_found ? "found #" + out.brand_position : "NOT found in top 10"}`);
   } catch (e) {
     out.error = `index check failed: ${e.message}`;
     log("google reality: " + out.error);

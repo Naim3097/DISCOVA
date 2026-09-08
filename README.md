@@ -72,6 +72,7 @@ Vercel (Next.js app)  ──WORKER_SECRET──►  Railway worker (Node + Playw
 - **Endpoints** (all behind `x-worker-secret`): `POST /analyze?domain=&tier=`
   · `GET /run-scores?runId=` · `GET /pdf?runId=` ·
   `POST /admin/purge-runs?confirm=delete-everything` (wipes every run).
+- **Before every worker push**: `node selftest.mjs` (worker/) executes the keyed search paths against a stubbed engine - 18 assertions, exits non-zero on failure.
 - **Local test modes** (worker/, no keys needed):
   `node index.js --analyze-test <domain> [--tier investigation]` (full pipeline,
   no DB) · `node index.js --pdf-test` (renders the enriched fixture, asserts
