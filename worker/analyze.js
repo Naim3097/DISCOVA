@@ -51,7 +51,20 @@ async function probe(domain, log) {
   p.hostA = await httpGet(`https://${apex}/`, { method: "HEAD" }).then((r) => ({ ...r, url: `https://${apex}/` })).catch((e) => ({ error: e.message }));
   p.hostB = await httpGet(`https://${www}/`, { method: "HEAD" }).then((r) => ({ ...r, url: `https://${www}/` })).catch((e) => ({ error: e.message }));
 
-  const base = p.httpRedirect?.finalUrl?.startsWith("https") ? new URL(p.httpRedirect.finalUrl).origin : `https://${domain}`;
+  let base;
+  if (p.httpRedirect?.finalUrl?.startsWith("https")) {
+    base = new URL(p.httpRedirect.finalUrl).origin;
+  } else if ((p.hostA?.code ?? 0) > 0 || (p.hostB?.code ?? 0) > 0) {
+    base = `https://${domain}`;
+  } else if ((p.httpRedirect?.code ?? 0) > 0) {
+    // No https anywhere, but plain http serves: audit what exists and let
+    // the missing secure address be the critical finding it is.
+    base = new URL(p.httpRedirect.finalUrl ?? `http://${domain}/`).origin;
+    p.httpsDead = true;
+    log("https fails outright; auditing over plain http");
+  } else {
+    base = `https://${domain}`;
+  }
   p.base = base;
 
   p.robots = await httpGet(`${base}/robots.txt`).catch((e) => ({ error: e.message }));

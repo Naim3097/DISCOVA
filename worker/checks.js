@@ -16,9 +16,23 @@ const F = (o) => ({
 export const CHECKS = [
   // ---------- Technical: protocol & hosts ----------
   {
+    id: "tech-https-dead",
+    run: (c) =>
+      c.probes.httpsDead
+        ? F({
+            category: CATS.T, severity: "critical",
+            title: "The site has no secure version at all",
+            evidence: `https:// connections fail outright on both hosts; only plain http:// answers`,
+            internal_detail: "No TLS certificate is being served. Provision one (the host or a proxy like Cloudflare does this free), serve the site over https, and 301 http across.",
+            client_summary: "Every browser stamps this website 'Not secure' before a visitor reads a word, and Google holds that against every page.",
+            reach: "high", effort: "low",
+          })
+        : null,
+  },
+  {
     id: "tech-https-redirect",
     run: (c) =>
-      c.probes.httpRedirect?.finalHttps === false
+      !c.probes.httpsDead && c.probes.httpRedirect?.finalHttps === false
         ? F({
             category: CATS.T, severity: "high",
             title: "The site does not settle on a secure address",
