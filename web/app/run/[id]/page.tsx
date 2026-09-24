@@ -90,7 +90,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       <div className="max-w-3xl mx-auto">
         <header className="flex items-center justify-between gap-2 flex-wrap pb-4">
           <span className="flex items-center gap-3">
-            <Link href="/" className="shrink-0">
+            <Link href="/dashboard" className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/discova-logo.png" alt="DISCOVA" className="h-8 w-auto" />
             </Link>

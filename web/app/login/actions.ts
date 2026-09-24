@@ -15,7 +15,7 @@ export async function signIn(formData: FormData) {
   (await cookies()).set("discova_auth", token(pass), {
     httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 30, path: "/",
   });
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function signOut() {

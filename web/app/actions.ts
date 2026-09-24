@@ -7,7 +7,7 @@ export async function startAudit(formData: FormData) {
   const tier = ["audit", "investigation", "intelligence"].includes(rawTier) ? rawTier : "audit";
   const competitors = String(formData.get("competitors") ?? "").trim();
   const base = process.env.WORKER_URL;
-  if (!base) redirect("/?err=worker");
+  if (!base) redirect("/dashboard?err=worker");
   let id: string | null = null;
   try {
     const r = await fetch(
@@ -25,7 +25,7 @@ export async function startAudit(formData: FormData) {
   } catch {
     // fall through to error redirect
   }
-  redirect(id ? `/run/${id}` : "/?err=start");
+  redirect(id ? `/run/${id}` : "/dashboard?err=start");
 }
 
 export async function deleteRun(formData: FormData) {
@@ -35,5 +35,5 @@ export async function deleteRun(formData: FormData) {
     const client = db();
     if (client) await client.from("runs").delete().eq("id", id); // findings + pages cascade
   }
-  redirect("/");
+  redirect("/dashboard");
 }

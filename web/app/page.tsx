@@ -1,175 +1,40 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { startAudit, deleteRun } from "@/app/actions";
-import { signOut } from "@/app/login/actions";
-import { AutoRefresh } from "@/app/refresh";
+import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
-
-const BAND_COLOR: Record<string, string> = {
-  Critical: "var(--attn)", Developing: "var(--improve)", Fair: "var(--accent)",
-  Good: "var(--good)", Excellent: "var(--good)",
+export const metadata: Metadata = {
+  title: "DISCOVA — Get your business website audited today",
+  description:
+    "One scan. A real Visibility Score, live Google measurements, and a report you keep. Powered by lean.X digital.",
 };
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
-  const { err } = await searchParams;
-  const client = db();
+const PROOF = [
+  "160-check professional framework",
+  "Live Google measurements",
+  "Design reviewed",
+  "A report you keep",
+];
 
-  if (!client) {
-    return (
-      <Shell>
-        <div className="bg-[var(--paper)] px-4 sm:px-8 py-10">
-          <h2 className="serif text-xl text-[var(--ink)]">Database not connected</h2>
-          <p className="mt-3 text-sm">Add the Supabase values in Vercel → Environment Variables, then redeploy.</p>
-        </div>
-      </Shell>
-    );
-  }
+const CARDS = [
+  {
+    title: "One honest score",
+    body: "60% is what your website is. 40% is whether Google actually shows it. No vanity numbers — a site nobody can find cannot score well here.",
+  },
+  {
+    title: "Google, today",
+    body: "How many of your pages Google lists, whether you appear for your own name, and whether you appear for the searches customers actually type. Measured live, never guessed.",
+  },
+  {
+    title: "A verdict, not a maybe",
+    body: "Every audit names the reason behind the number — “Too new for Google”, “Findable by name only”, “Visible but outgunned” — and what it is costing you.",
+  },
+];
 
-  const [{ data: beat }, { data: runs, error }] = await Promise.all([
-    client.from("worker_heartbeat").select("last_beat, version").eq("id", 1).maybeSingle(),
-    client.from("runs").select("id, domain, tier, status, started_at, scores").order("started_at", { ascending: false }).limit(50),
-  ]);
-
-  const beatAge = beat ? (Date.now() - new Date(beat.last_beat).getTime()) / 1000 : null;
-  const engineAlive = beatAge !== null && beatAge < 90;
-
-  const anyRunning = (runs ?? []).some((r) => !["done", "failed", "partial"].includes(r.status));
-
+export default function Landing() {
   return (
-    <Shell>
-      {anyRunning && <AutoRefresh every={5000} />}
-      {/* Engine status */}
-      <div className="bg-[var(--paper)] px-4 sm:px-8 py-4 sm:py-5 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between border-b border-[var(--hair)]">
-        <span className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Engine</span>
-        <span className="text-sm" style={{ color: engineAlive ? "var(--good)" : "var(--attn)" }}>
-          {engineAlive
-            ? `alive — heartbeat ${Math.round(beatAge!)}s ago (${beat!.version})`
-            : beat ? `stale — last heartbeat ${Math.round(beatAge!)}s ago` : "no heartbeat yet"}
-        </span>
-      </div>
-      {!process.env.APP_PASSWORD && (
-        <div className="bg-[var(--paper)] px-4 sm:px-8 py-3 border-b border-[var(--hair)]">
-          <p className="text-[12px] text-[var(--improve)]">
-            No team password set — anyone with the link can use this. Add APP_PASSWORD in Vercel to close the gate.
-          </p>
-        </div>
-      )}
-
-      {/* New analysis */}
-      <div className="bg-[var(--paper)] px-4 sm:px-8 py-7 border-b border-[var(--hair)]">
-        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">New analysis</p>
-        {err && (
-          <p className="mt-3 text-sm text-[var(--attn)]">
-            {err === "worker" ? "WORKER_URL is not configured." : "The engine could not start that audit — check the domain and try again."}
-          </p>
-        )}
-        <form action={startAudit} className="mt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              name="domain" required placeholder="example.com.my"
-              className="flex-1 border border-[var(--rule)] bg-transparent px-4 py-2.5 text-[15px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
-            />
-            <button
-              type="submit"
-              className="w-full sm:w-auto shrink-0 bg-[var(--accent)] text-white px-6 py-2.5 text-sm hover:opacity-90"
-            >
-              Run audit
-            </button>
-          </div>
-          <div className="mt-5">
-            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 cursor-pointer sm:flex sm:gap-4">
-              <input type="radio" name="tier" value="audit" defaultChecked className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Audit</span>
-              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~2 min</span>
-              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">The complete lean.X audit. Key pages, full check register, client-ready PDF.</span>
-            </label>
-            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 border-t border-[var(--hair)] cursor-pointer sm:flex sm:gap-4">
-              <input type="radio" name="tier" value="investigation" className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Investigation</span>
-              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~5 min</span>
-              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">Everything in Audit, plus a site-wide crawl: the patterns and template-level causes behind the findings. Same score.</span>
-            </label>
-            <label className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-3 gap-y-1 py-3 border-t border-[var(--hair)] cursor-pointer sm:flex sm:gap-4">
-              <input type="radio" name="tier" value="intelligence" className="translate-y-0.5 accent-[var(--accent)]" />
-              <span className="serif text-lg text-[var(--ink)] sm:w-32 sm:shrink-0">Intelligence</span>
-              <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~6 min</span>
-              <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">Everything in Investigation, plus Google&apos;s speed data, competitor comparison, priorities and an internal 30/60/90. Same score.</span>
-            </label>
-            <div className="pt-2 pb-1 border-t border-[var(--hair)]">
-              <input
-                name="competitors"
-                placeholder="Competitors, up to 3, comma separated — Intelligence only (optional)"
-                className="w-full border border-[var(--rule)] bg-transparent px-4 py-2 text-[13px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
-              />
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Runs */}
-      <div className="bg-[var(--paper)] px-4 sm:px-8 py-7">
-        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
-        {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
-        {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
-        <div className="mt-2">
-          {runs?.map((r) => {
-            const overall = r.scores?.overall as number | undefined;
-            const band = r.scores?.band as string | undefined;
-            const running = !["done", "failed", "partial"].includes(r.status);
-            return (
-              <div key={r.id}
-                className="flex items-center gap-3 border-t border-[var(--hair)] first:border-t-0 hover:bg-[var(--ground)] -mx-3 px-3 group">
-                <Link href={`/run/${r.id}`} className="flex items-center gap-2 sm:gap-3 py-2.5 flex-1 min-w-0">
-                  <span className="text-[14px] font-medium text-[var(--ink)] flex-1 truncate">{r.domain}</span>
-                  <span className="hidden sm:block text-[9px] font-mono uppercase tracking-wider text-[var(--faint)] border border-[var(--rule)] rounded px-1.5 py-0.5 w-28 text-center shrink-0">
-                    {r.tier}
-                  </span>
-                  <span className="hidden min-[440px]:block text-[11px] font-mono text-[var(--faint)] w-24 text-right shrink-0">
-                    {new Date(r.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{" · "}
-                    {new Date(r.started_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  <span className="flex items-baseline justify-end gap-1.5 w-32 min-[440px]:w-44 shrink-0">
-                    <span
-                      className={`text-[10px] font-mono text-right w-12 min-[440px]:w-20 truncate ${running ? "animate-pulse" : ""}`}
-                      style={{
-                        color:
-                          r.status === "failed" ? "var(--attn)"
-                          : r.status === "partial" ? "var(--improve)"
-                          : running ? "var(--accent)"
-                          : BAND_COLOR[band ?? ""] ?? "var(--muted)",
-                      }}>
-                      {r.status === "failed" ? "failed" : r.status === "partial" ? "partial" : running ? `${r.status}…` : band}
-                    </span>
-                    <span className="font-semibold text-[15px] text-[var(--ink)] tabular-nums text-right w-8">
-                      {overall !== undefined ? overall : "—"}
-                    </span>
-                    <span className="text-[10px] text-[var(--faint)] w-7">
-                      {overall !== undefined ? "/100" : ""}
-                    </span>
-                  </span>
-                </Link>
-                <form action={deleteRun} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <input type="hidden" name="id" value={r.id} />
-                  <button type="submit" title="Delete this run and its findings"
-                    className="text-[var(--faint)] hover:text-[var(--attn)] text-sm px-1.5 py-2">
-                    ✕
-                  </button>
-                </form>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="min-h-screen px-3 py-5 sm:px-6 sm:py-10">
+    <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-10">
       <div className="max-w-3xl mx-auto">
-        <header className="flex items-center justify-between gap-2 flex-wrap pb-4">
+        {/* Header */}
+        <header className="flex items-center justify-between gap-2 flex-wrap pb-8">
           <span className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/discova-logo.png" alt="DISCOVA" className="h-8 w-auto" />
@@ -177,18 +42,87 @@ function Shell({ children }: { children: React.ReactNode }) {
               powered by lean.X digital
             </span>
           </span>
-          <span className="text-[11px] text-[var(--faint)] flex items-baseline gap-3">
-            internal
-            {process.env.APP_PASSWORD && (
-              <form action={signOut}>
-                <button type="submit" className="hover:text-[var(--ink)] underline underline-offset-2">
-                  sign out
-                </button>
-              </form>
-            )}
-          </span>
+          <Link
+            href="/dashboard"
+            className="text-[11px] text-[var(--faint)] underline underline-offset-2 hover:text-[var(--ink)]"
+          >
+            team sign in
+          </Link>
         </header>
-        <div className="border-t-2 border-[var(--ink)]">{children}</div>
+
+        {/* Hero */}
+        <div className="border-t-2 border-[var(--ink)] bg-[var(--paper)]">
+          <section className="px-5 sm:px-10 pt-10 sm:pt-16 pb-10 sm:pb-14">
+            <h1 className="serif text-4xl sm:text-6xl leading-[1.04] text-[var(--ink)]">
+              Get your business website{" "}
+              <span className="bg-[var(--neon,#A8E60A)] px-2 -mx-1 whitespace-nowrap">audited today.</span>
+            </h1>
+            <p className="mt-5 sm:mt-6 text-[16px] sm:text-[18px] leading-relaxed text-[var(--body)] max-w-xl">
+              Walk away with a real report of your visibility on Google — what
+              customers can find, what they can&rsquo;t, and what that is
+              quietly costing you.
+            </p>
+
+            <div className="mt-8 sm:mt-10">
+              <Link
+                href="/dashboard"
+                className="inline-block bg-[var(--accent)] text-white text-[17px] px-8 py-4 w-full sm:w-auto text-center"
+              >
+                Audit my business now
+              </Link>
+              <p className="mt-3 text-[12px] text-[var(--faint)]">
+                Takes about two minutes. Every claim in the report is backed by
+                evidence you can check yourself.
+              </p>
+            </div>
+
+            {/* Proof strip */}
+            <div className="mt-10 flex flex-wrap gap-1.5">
+              {PROOF.map((p) => (
+                <span
+                  key={p}
+                  className="text-[9px] font-mono uppercase tracking-wide px-2 py-1 rounded border border-[var(--hair)] text-[var(--muted)]"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* What you get */}
+          <section className="border-t border-[var(--hair)] px-5 sm:px-10 py-8 sm:py-10">
+            <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)] mb-5">
+              What the audit tells you
+            </p>
+            <div className="grid gap-5 sm:grid-cols-3">
+              {CARDS.map((c) => (
+                <div key={c.title} className="border-l-2 border-[var(--fill)] pl-4">
+                  <h2 className="serif text-[17px] text-[var(--ink)]">{c.title}</h2>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--muted)]">{c.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Closing CTA */}
+          <section className="border-t border-[var(--hair)] px-5 sm:px-10 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+            <p className="serif text-[19px] sm:text-[21px] text-[var(--ink)] max-w-md leading-snug">
+              If your website is invisible, this report will say so — and show
+              you exactly why.
+            </p>
+            <Link
+              href="/dashboard"
+              className="bg-[var(--accent)] text-white text-[15px] px-7 py-3.5 text-center shrink-0"
+            >
+              Audit my business now
+            </Link>
+          </section>
+        </div>
+
+        <footer className="pt-5 text-[10px] tracking-[.12em] uppercase text-[var(--faint)] flex justify-between flex-wrap gap-2">
+          <span>DISCOVA · powered by lean.X digital</span>
+          <span>© {new Date().getFullYear()} lean.X digital</span>
+        </footer>
       </div>
     </main>
   );

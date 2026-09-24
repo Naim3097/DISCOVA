@@ -16,7 +16,7 @@ async function expectedToken(secret: string) {
 export async function middleware(req: NextRequest) {
   const pass = process.env.APP_PASSWORD;
   if (!pass) return NextResponse.next();
-  if (req.nextUrl.pathname === "/login") return NextResponse.next();
+  if (req.nextUrl.pathname === "/" || req.nextUrl.pathname === "/login") return NextResponse.next();
   const cookie = req.cookies.get("discova_auth")?.value;
   if (cookie && cookie === (await expectedToken(pass))) return NextResponse.next();
   const url = req.nextUrl.clone();
