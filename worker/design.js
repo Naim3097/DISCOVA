@@ -1,4 +1,5 @@
 // DISCOVA design review — the 24 criteria of framework §3.8.
+import { usage } from "./usage.js";
 // 12 measured deterministically from the rendered DOM; 12 judged by Claude
 // vision from a page screenshot + key images. No API key → returns null and
 // Design stays pending; it never fakes a score.
@@ -184,6 +185,8 @@ async function callVision(dom, context) {
       });
       if (!res.ok) throw new Error(`API ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const data = await res.json();
+      usage.anthropic_in += data.usage?.input_tokens ?? 0;
+      usage.anthropic_out += data.usage?.output_tokens ?? 0;
       const text = data.content?.map((b) => b.text ?? "").join("") ?? "";
       const json = text.match(/\{[\s\S]*\}/)?.[0];
       if (!json) throw new Error("no JSON in response");

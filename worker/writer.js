@@ -1,4 +1,5 @@
 // DISCOVA writer layer — site-specific client prose for the Visibility Check.
+import { usage } from "./usage.js";
 // Disclosure enforced structurally: the writer never receives internal_detail
 // or raw evidence, and its output is scanned for technical vocabulary.
 // Any failure falls back to the deterministic phrases; a run never blocks on prose.
@@ -77,6 +78,8 @@ async function callWriter(prompt) {
   });
   if (!res.ok) throw new Error(`writer API ${res.status}`);
   const data = await res.json();
+  usage.anthropic_in += data.usage?.input_tokens ?? 0;
+  usage.anthropic_out += data.usage?.output_tokens ?? 0;
   const text = data.content?.map((b) => b.text ?? "").join("") ?? "";
   const json = text.match(/\{[\s\S]*\}/)?.[0];
   if (!json) throw new Error(`writer returned no JSON (stop: ${data.stop_reason}, blocks: ${(data.content ?? []).map((b) => b.type).join("+") || "none"})`);

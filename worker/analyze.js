@@ -10,6 +10,7 @@ import { intelligenceLayer, buildPriorities, buildPlan } from "./intelligence.js
 import { googleReality, realityForWriter, presenceScore, makeSearch, funnelFrom } from "./reality.js";
 import { authorityLite } from "./authority.js";
 import { diagnose } from "./diagnose.js";
+import { resetUsage, runCost } from "./usage.js";
 
 const UA = "DiscovaBot/1.0 (+https://discova-production.up.railway.app/bot)";
 const T = (ms) => AbortSignal.timeout(ms);
@@ -292,6 +293,7 @@ async function render(base, log, rawBody) {
 
 export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [], searchOverride = null } = {}) {
   const ctx = { domain, probes: {}, dom: {} };
+  resetUsage();
 
   await onStatus("crawling");
   ctx.probes = await probe(domain, log);
@@ -479,6 +481,9 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
       scores.clearest_gap = { ...cands[narrative.gap_index], note: narrative.gap_note ?? "" };
     }
   }
+
+  scores.run_cost = runCost();
+  log(`run cost: ${scores.run_cost.total_usd} (${scores.run_cost.anthropic_tokens.input}+${scores.run_cost.anthropic_tokens.output} tokens, ${scores.run_cost.searches} searches)`);
 
   return { scores, findings: [...findings, ...invFindings], pages: surveyPages, ctx };
 }

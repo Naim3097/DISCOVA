@@ -99,6 +99,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             </span>
           </span>
           <span className="hidden sm:block text-[11px] text-[var(--faint)]">
+            {s.run_cost?.total_usd != null ? `run cost ~${s.run_cost.total_usd} · ` : ""}
             {run.tier} · framework v{run.framework_version} ·{" "}
             {new Date(run.started_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
           </span>

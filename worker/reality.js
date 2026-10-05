@@ -1,4 +1,5 @@
 // DISCOVA Google-reality check — observed presence, kept beside the score,
+import { usage } from "./usage.js";
 // never inside it. The audit score means "how ready the site is"; this module
 // answers "can anyone actually find it": pages Google lists (official Custom
 // Search API), whether the site surfaces for its own name, and domain age
@@ -13,6 +14,7 @@ const CSE = "https://www.googleapis.com/customsearch/v1";
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 async function serperQuery(q, key, attempt = 0) {
+  usage.searches++;
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     signal: AbortSignal.timeout(15_000),
@@ -42,6 +44,7 @@ async function cseAdapter(q, key, cx) {
 }
 
 async function cseQuery(q, key, cx) {
+  usage.searches++;
   const u = `${CSE}?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(q)}&num=10`;
   const res = await fetch(u, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`CSE ${res.status}`);
