@@ -207,6 +207,34 @@ async function render(base, log, rawBody) {
         palette: Object.entries(pal).sort((a, b) => b[1] - a[1]).slice(0, 12),
         waLinks: wa,
         waPrefilledCount: wa.filter((h) => /[?&]text=/.test(h ?? "")).length,
+        forms: (() => {
+          const fset = [...document.querySelectorAll("form")].filter((f) => !f.querySelector('input[type="search"]') || f.querySelectorAll("input,select,textarea").length > 2);
+          return {
+            count: fset.length,
+            maxFields: Math.max(0, ...fset.map((f) => [...f.querySelectorAll('input:not([type=hidden]):not([type=submit]),select,textarea')].length)),
+          };
+        })(),
+        ctaFirstTop: (() => {
+          const els = [...document.querySelectorAll('a[href*="wa.me"],a[href*="api.whatsapp"],a[href^="tel:"],form,a[href*="cart"],a[href*="checkout"],a[href*="book"],a[href*="tempah"],a[href*="appointment"]')];
+          let m = Infinity;
+          els.forEach((e) => {
+            const r = e.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) m = Math.min(m, r.top + window.scrollY);
+          });
+          return m === Infinity ? null : Math.round(m);
+        })(),
+        stickyContact: [...document.querySelectorAll('a[href*="wa.me"],a[href^="tel:"],a[href*="api.whatsapp"]')].some((a) => {
+          let e = a;
+          while (e && e !== document.body) {
+            const p = getComputedStyle(e).position;
+            if (p === "fixed" || p === "sticky") return true;
+            e = e.parentElement;
+          }
+          return false;
+        }),
+        cartSignals: !!document.querySelector('a[href*="cart"],a[href*="checkout"],a[href*="troli"],[class*="add-to-cart"],[class*="add_to_cart"],button[name*="add-to-cart"]'),
+        bookingSignals: !!document.querySelector('a[href*="book"],a[href*="tempah"],a[href*="appointment"],a[href*="janji"],a[href*="calendly"],iframe[src*="calendly"]'),
+        priceMentions: (document.body.innerText.match(/\b(RM|MYR)\s?\d|\$\s?\d/g) || []).length,
         tel: document.querySelectorAll('a[href^="tel:"]').length,
         mailto: document.querySelectorAll('a[href^="mailto:"]').length,
         imgs: [...document.images].slice(0, 60).map((i) => ({
@@ -291,7 +319,16 @@ async function render(base, log, rawBody) {
   return dom;
 }
 
-export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [], searchOverride = null } = {}) {
+// What the site is FOR, read from its own signals. Manual declaration wins;
+// both values are recorded so the choice is always visible.
+export function detectObjective(dom) {
+  if (dom.cartSignals && (dom.priceMentions ?? 0) >= 2) return "ecommerce";
+  if (dom.bookingSignals) return "bookings";
+  if ((dom.forms?.count ?? 0) > 0 || (dom.waLinks?.length ?? 0) > 0 || (dom.tel ?? 0) > 0) return "leads";
+  return "brand";
+}
+
+export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [], objective = null, searchOverride = null } = {}) {
   const ctx = { domain, probes: {}, dom: {} };
   resetUsage();
 
@@ -309,6 +346,10 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     ctx.dom = {};
     log(`render failed: ${e.message} — continuing with raw checks only`);
   }
+
+  const detected = detectObjective(ctx.dom);
+  ctx.objective = { declared: objective, detected, effective: objective ?? detected };
+  log(`objective: ${ctx.objective.effective}${objective ? " (declared)" : " (detected)"}`);
 
   await onStatus("checking");
   const findings = [];
@@ -382,6 +423,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
     ),
     coverage_note: `engine assesses ${CHECKS.length} of the 160-check register; a category's score means \"no issues found among its assessed checks\", weighted by its coverage confidence`,
     engine: tier === "audit" ? "audit-v1" : `${tier}-v1`,
+    objective: ctx.objective,
     ...(renderFailed ? { partial_note: "the page could not be rendered in a browser, so browser-verified checks were skipped" } : {}),
   };
   let invFindings = [], surveyPages = [];

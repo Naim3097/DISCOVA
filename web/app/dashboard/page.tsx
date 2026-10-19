@@ -96,6 +96,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
               <span className="text-xs text-[var(--faint)] justify-self-end sm:order-last sm:shrink-0">~6 min</span>
               <span className="text-sm col-span-3 sm:col-span-1 sm:flex-1">Everything in Investigation, plus Google&apos;s speed data, competitor comparison, priorities and an internal 30/60/90. Same score.</span>
             </label>
+            <div className="pt-3 pb-1 border-t border-[var(--hair)] flex flex-col sm:flex-row gap-2 sm:items-center">
+              <label className="text-xs text-[var(--muted)] sm:w-32 shrink-0" htmlFor="objective">Site objective</label>
+              <select
+                id="objective" name="objective" defaultValue=""
+                className="flex-1 border border-[var(--rule)] bg-transparent px-3 py-2 text-[13px] text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+              >
+                <option value="">Auto-detect</option>
+                <option value="ecommerce">Sell online</option>
+                <option value="leads">Get enquiries (WhatsApp / form)</option>
+                <option value="bookings">Get bookings</option>
+                <option value="brand">Build brand &amp; credibility</option>
+              </select>
+            </div>
             <div className="pt-2 pb-1 border-t border-[var(--hair)]">
               <input
                 name="competitors"

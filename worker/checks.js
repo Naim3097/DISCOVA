@@ -744,6 +744,102 @@ export const CHECKS = [
     },
   },
 
+  // ---------- Conversion: does the site turn visitors into action ----------
+  {
+    id: "conv-objective-mismatch",
+    run: (c) => {
+      const o = c.objective;
+      if (!o?.declared) return null; // only judged against a goal someone DECLARED
+      const d = c.dom;
+      const missing =
+        o.declared === "ecommerce" && !d.cartSignals ? "no way to buy - no cart or checkout anywhere" :
+        o.declared === "bookings" && !d.bookingSignals ? "no way to book - no booking or appointment path anywhere" :
+        o.declared === "leads" && (d.forms?.count ?? 0) === 0 && (d.waLinks?.length ?? 0) === 0 && (d.tel ?? 0) === 0 ? "no enquiry path - no form, WhatsApp or phone link" :
+        null;
+      return missing
+        ? F({
+            category: CATS.U, severity: "critical",
+            title: "The site cannot do what it exists to do",
+            evidence: `Declared objective: ${o.declared}; ${missing}`,
+            verification: "rendered_dom",
+            internal_detail: `Objective "${o.declared}" has no supporting mechanism on the page. Build the primary action path before anything else matters.`,
+            client_summary: "The one thing this website exists to make visitors do is not possible anywhere on it.",
+            reach: "high", effort: "medium",
+          })
+        : null;
+    },
+  },
+  {
+    id: "conv-no-action-above-fold",
+    run: (c) => {
+      const o = c.objective?.effective;
+      if (!["ecommerce", "leads", "bookings"].includes(o)) return null;
+      const t = c.dom.ctaFirstTop;
+      return t != null && t > 900
+        ? F({
+            category: CATS.U, severity: "medium",
+            title: "Nothing to act on in the first screen",
+            evidence: `First action (enquiry/buy/book) appears ${t}px down the page; the first screen ends around 900px`,
+            verification: "rendered_dom",
+            internal_detail: "Put the primary CTA in the hero; every scroll before the first action loses a share of visitors.",
+            client_summary: "A visitor sees a full screen of the site before being offered anything to do, and some never scroll.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "conv-form-friction",
+    run: (c) => {
+      const o = c.objective?.effective;
+      const mf = c.dom.forms?.maxFields ?? 0;
+      return o === "leads" && mf >= 7
+        ? F({
+            category: CATS.U, severity: "medium",
+            title: `The enquiry form demands ${mf} answers`,
+            evidence: `Largest form has ${mf} visible fields`,
+            verification: "rendered_dom",
+            internal_detail: "Cut to name + contact + one question; every extra field costs completions. Ask the rest after first contact.",
+            client_summary: "Interested visitors are handed a long form where a short one would start the conversation.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+  {
+    id: "conv-price-hidden",
+    run: (c) =>
+      c.objective?.effective === "ecommerce" && (c.dom.priceMentions ?? 0) === 0
+        ? F({
+            category: CATS.U, severity: "medium",
+            title: "A shop with no prices in sight",
+            evidence: "Objective is selling online, yet no price appears anywhere on the rendered homepage",
+            verification: "rendered_dom",
+            internal_detail: "Surface prices on the homepage or category level; price-on-request patterns suppress purchase intent online.",
+            client_summary: "Shoppers comparing options cannot see a single price without digging, and most will not dig.",
+            effort: "low",
+          })
+        : null,
+  },
+  {
+    id: "conv-no-persistent-contact",
+    run: (c) => {
+      const o = c.objective?.effective;
+      const hasChannel = (c.dom.waLinks?.length ?? 0) > 0 || (c.dom.tel ?? 0) > 0;
+      return ["leads", "bookings"].includes(o) && hasChannel && c.dom.stickyContact === false
+        ? F({
+            category: CATS.U, severity: "low",
+            title: "Contact disappears as the visitor reads",
+            evidence: "WhatsApp/phone links exist but none stays on screen while scrolling",
+            verification: "rendered_dom",
+            internal_detail: "Add a persistent WhatsApp/call button (fixed position, mobile especially); the moment of decision rarely happens at the top of the page.",
+            client_summary: "When a reader decides to get in touch, the way to do it has scrolled away.",
+            effort: "quick_win",
+          })
+        : null;
+    },
+  },
+
   // ---------- Quality tier: separates "exists" from "good" ----------
   // These fire only when the base element passes its presence check, so a site
   // that merely HAS things stops scoring like a site whose things are GOOD.

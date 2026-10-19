@@ -6,12 +6,15 @@ export async function startAudit(formData: FormData) {
   const rawTier = String(formData.get("tier") ?? "audit");
   const tier = ["audit", "investigation", "intelligence"].includes(rawTier) ? rawTier : "audit";
   const competitors = String(formData.get("competitors") ?? "").trim();
+  const objectiveRaw = String(formData.get("objective") ?? "");
+  const objective = ["ecommerce", "leads", "bookings", "brand"].includes(objectiveRaw) ? objectiveRaw : "";
   const base = process.env.WORKER_URL;
   if (!base) redirect("/dashboard?err=worker");
   let id: string | null = null;
   try {
     const r = await fetch(
       `${base.replace(/\/+$/, "")}/analyze?domain=${encodeURIComponent(domain)}&tier=${tier}` +
+        (objective ? `&objective=${objective}` : "") +
         (tier === "intelligence" && competitors ? `&competitors=${encodeURIComponent(competitors)}` : ""),
       {
         method: "POST",

@@ -145,6 +145,13 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
             {settled && s.narrative?.lead && (
               <p className="serif italic text-[17px] text-[var(--ink)] mt-3 max-w-xl">{s.narrative.lead}</p>
             )}
+            {settled && s.objective && (
+              <p className="mt-2 text-[11px] text-[var(--faint)]">
+                Objective: {({ ecommerce: "sell online", leads: "get enquiries", bookings: "get bookings", brand: "build brand" } as Record<string, string>)[s.objective.effective] ?? s.objective.effective}
+                {s.objective.declared ? " · set by you" : " · detected"}
+                {s.objective.declared && s.objective.declared !== s.objective.detected ? ` (engine detected: ${s.objective.detected})` : ""}
+              </p>
+            )}
             {settled && s.diagnosis && s.diagnosis.code !== "pending" && (
               <p className="mt-3 text-[13px]">
                 <span className="font-semibold px-2 py-0.5 rounded border border-[var(--rule)] mr-2"
