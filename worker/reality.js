@@ -79,11 +79,31 @@ export function makeSearch() {
       : null;
 }
 
-// The searches a real customer would type, derived from the site's own words:
-// title segments after the brand, and non-generic headline text.
+// The searches a real customer would type, derived from the site's own words
+// with the BRAND REMOVED: a query containing the business name proves nothing
+// about whether strangers can find it. Only the non-branded remainder is tested.
 export function deriveServiceQueries(ctx) {
   const domain = (ctx.domain ?? "").replace(/^www\./, "");
   const brandLabel = domain.split(".")[0].toLowerCase();
+  const brandWords = new Set(
+    [
+      ...(deriveBrand(ctx, domain).primary.toLowerCase().match(/[a-z0-9]+/g) ?? []),
+      brandLabel,
+    ].filter((t) => t.length >= 3)
+  );
+  const stripBrand = (q) =>
+    q.split(/\s+/)
+      .filter((w) => {
+        const lw = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!lw) return false;
+        if (brandWords.has(lw)) return false;
+        if (lw.length >= 5 && brandLabel.includes(lw)) return false;
+        return true;
+      })
+      .join(" ")
+      .replace(/^(with|for|by|the|and|in|of|to)\s+/i, "")
+      .replace(/\s+(with|for|by|the|and|in|of|to)$/i, "")
+      .trim();
   const generic = /^(home|welcome( to)?|about( us)?|services|our services|contact( us)?|utama|laman utama|laman rasmi|selamat datang|official( website| site)?|website|index)$/i;
   const cands = [];
   const segs = (ctx.dom?.title ?? "").split(/[|\-–—·:]/).map((s) => s.trim()).filter(Boolean);
@@ -92,12 +112,11 @@ export function deriveServiceQueries(ctx) {
   const seen = new Set();
   const out = [];
   for (const c of cands) {
-    const q = (c ?? "").replace(/\s+/g, " ").trim();
+    const q = stripBrand((c ?? "").replace(/\s+/g, " ").trim());
     const key2 = q.toLowerCase();
     if (q.length < 8 || q.length > 70) continue;
     if (q.split(" ").length < 2) continue;
     if (generic.test(q)) continue;
-    if (key2.replace(/[^a-z0-9]/g, "").includes(brandLabel) && q.split(" ").length < 3) continue;
     if (seen.has(key2)) continue;
     seen.add(key2);
     out.push(q.slice(0, 70));
@@ -208,11 +227,11 @@ export function realityForWriter(gr) {
   if (svc && svc.length) {
     const hits = svc.filter((s) => s.position != null);
     if (hits.length === 0)
-      bits.push(`tested against ${svc.length} searches real customers would use, it appears for none (never name or guess the phrases tested)`);
+      bits.push(`tested against ${svc.length} non-branded searches (business name removed), it appears for none (never name or guess the phrases tested)`);
     else
-      bits.push(`it appears in ${hits.length} of ${svc.length} searches real customers would use, though not always prominently (never name or guess the phrases tested)`);
+      bits.push(`it appears in ${hits.length} of ${svc.length} non-branded searches (business name removed), though not always prominently (never name or guess the phrases tested)`);
   } else if (svc) {
-    bits.push("the page offers no service phrases a customer would search, so there was nothing to test it against");
+    bits.push("no non-branded search phrase could be derived from the site's own copy, which means strangers have nothing to find it by");
   }
   return bits.join("; ") + ".";
 }
@@ -223,25 +242,31 @@ export function presenceScore(gr, builtPages) {
   if (!gr || gr.pending || gr.error || typeof gr.indexed_pages !== "number") return null;
   // The count is a floor (we see at most one page of results), so measure
   // against what is knowable: full page = fully healthy; small sites exactly.
+  // Scale v0.15: non-branded discoverability carries the weight. Being found
+  // by your own name proves little; being found by strangers is visibility.
   const built = Math.max(builtPages ?? 1, 1);
   const base = Math.min(built, 10);
   const indexRatio = Math.min(1, gr.indexed_pages / base);
-  const indexPts = Math.round(indexRatio * 40);
+  const indexPts = Math.round(indexRatio * 30);
   const namePts = gr.brand_position != null
-    ? (gr.brand_position <= 3 ? 40 : 28)
+    ? (gr.brand_position <= 3 ? 20 : 14)
     : 0;
   const svc = gr.service_queries ?? null;
   const hits = svc ? svc.filter((s) => s.position != null).length : null;
-  const svcPts = hits == null ? null : hits >= 2 ? 20 : hits === 1 ? 14 : 0;
+  const svcPts = hits == null ? (svc ? 0 : null) : hits >= 2 ? 50 : hits === 1 ? 35 : 0;
   const score = svcPts == null
-    ? Math.round(((indexPts + namePts) / 80) * 100)
+    ? Math.round(((indexPts + namePts) / 50) * 100)
     : Math.min(100, indexPts + namePts + svcPts);
   return {
     score,
     components: {
-      indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/40`,
-      own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/40` : "not found in top 10 -> 0/40",
-      searches: svcPts == null ? "not measured" : `found for ${hits} of ${svc.length} customer searches -> ${svcPts}/20`,
+      indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/30`,
+      own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/20` : "not found in top 10 -> 0/20",
+      non_branded: svc == null
+        ? "not measured"
+        : svc.length === 0
+          ? "no non-branded phrase derivable from the site's copy -> 0/50 (the copy only talks about the brand)"
+          : `found for ${hits} of ${svc.length} non-branded searches -> ${svcPts}/50`,
     },
   };
 }

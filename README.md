@@ -32,16 +32,18 @@ Vercel (Next.js app)  ──WORKER_SECRET──►  Railway worker (Node + Playw
   30/60/90, ~6 min). The score is identical at every tier (locked P3);
   deeper tiers add explanation, never a different number.
 
-## The score (scale v0.13, 3 Sep 2026)
+## The score (scale v0.15, 19 Oct 2026)
 
 **Visibility Score = 60% site readiness + 40% observed Google presence.**
 
 - *Readiness* = evidence-weighted framework score: category weight =
   framework weight × (checks assessed / register). No credit for unexamined
   ground. ~55 of the 160-check register assessed; grows over time.
-- *Presence* = 40 pts indexing (own-domain `site:` results, floor-aware) +
-  40 pts found for its own name (top 3 = 40, top 10 = 28) + 20 pts appearing
-  for customer searches derived from the site's own wording.
+- *Presence* = 30 pts indexing (own-domain `site:` results, floor-aware) +
+  20 pts found for its own name (top 3 = 20, top 10 = 14) + **50 pts
+  non-branded discoverability**: searches derived from the site's own copy
+  with every brand token stripped. A site whose copy is so brand-only that
+  no non-branded phrase can be derived scores 0/50, with the reason stated.
 - Every run carries: the formula, a **diagnosis** (deterministic cause:
   "Too new for Google" … "Genuinely visible"), the **funnel**
   (Crawlable → Indexable → Indexed → Found by name → Found for searches),

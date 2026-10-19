@@ -1076,7 +1076,7 @@ export const ASSESSED = CHECKS.reduce((m, c) => {
 export const REGISTER = {
   [CATS.T]: { register: 18 }, [CATS.O]: { register: 13 }, [CATS.C]: { register: 18 },
   [CATS.K]: { register: 13 }, [CATS.S]: { register: 9 }, [CATS.L]: { register: 5 },
-  [CATS.A]: { register: 9 }, [CATS.U]: { register: 5 }, [CATS.D]: { register: 24 },
+  [CATS.A]: { register: 9 }, [CATS.U]: { register: 15 }, [CATS.D]: { register: 24 }, // U: 5 UX + 10 conversion (5 shipped, 5 vision pending)
 };
 
 // Deterministic strengths — drawn from checks that PASSED. Real, never invented.

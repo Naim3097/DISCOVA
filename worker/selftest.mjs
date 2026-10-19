@@ -52,7 +52,12 @@ check("one service hit", hits === 1, `hits=${hits}`);
 // ---- presence on that result ----
 const pres = presenceScore(gr, 12);
 check("presence computed", pres && typeof pres.score === "number", JSON.stringify(pres?.score));
-check("presence = 40+40+14", pres?.score === 94, `got ${pres?.score}`);
+check("presence = 30+20+35 (non-branded weighted)", pres?.score === 85, `got ${pres?.score}`);
+const bluecab = deriveServiceQueries({
+  domain: "bluecabmalaysiavip.com",
+  dom: { title: "BlueCab Malaysia VIP — Travel in Comfort with BlueCab Malaysia VIP", h1s: ["Travel in Comfort with BlueCab Malaysia VIP"] },
+});
+check("brand stripped from derived queries", bluecab.every((q) => !/bluecab|vip/i.test(q)), JSON.stringify(bluecab));
 
 // ---- funnel ----
 const fun = funnelFrom(ctx, gr);
