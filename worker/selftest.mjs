@@ -57,7 +57,9 @@ const bluecab = deriveServiceQueries({
   domain: "bluecabmalaysiavip.com",
   dom: { title: "BlueCab Malaysia VIP — Travel in Comfort with BlueCab Malaysia VIP", h1s: ["Travel in Comfort with BlueCab Malaysia VIP"] },
 });
-check("brand stripped from derived queries", bluecab.every((q) => !/bluecab|vip/i.test(q)), JSON.stringify(bluecab));
+check("distinctive brand token stripped from derived queries", bluecab.every((q) => !/bluecab/i.test(q)), JSON.stringify(bluecab));
+check("generic words not treated as brand", (await import("./reality.js")).isBrandedTerm({ dom: { title: "BlueCab Malaysia VIP" } }, "bluecabmalaysiavip.com", "luxury taxi malaysia") === false);
+check("distinctive token still branded", (await import("./reality.js")).isBrandedTerm({ dom: { title: "BlueCab Malaysia VIP" } }, "bluecabmalaysiavip.com", "bluecab airport transfer") === true);
 
 // manual terms: branded ones tested but excluded from scoring
 const grM = await googleReality(ctx, {

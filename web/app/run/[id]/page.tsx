@@ -214,13 +214,19 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                         {s.google_reality.brand_position != null && (
                           <span className="text-[var(--good)]">#{s.google_reality.brand_position} for its own name</span>
                         )}
-                        {Array.isArray(s.google_reality.service_queries) && (
-                          <span style={{ color: s.google_reality.service_queries.some((q: any) => q.position != null) ? "var(--good)" : "var(--attn)" }}>
-                            {s.google_reality.service_queries.length === 0
-                              ? "no non-branded phrases to test"
-                              : `non-branded: ${s.google_reality.service_queries.filter((q: any) => q.position != null).length} of ${s.google_reality.service_queries.length}`}
-                          </span>
-                        )}
+                        {Array.isArray(s.google_reality.service_queries) && (() => {
+                          const nb = s.google_reality.service_queries.filter((q: any) => !q.branded);
+                          const nbHits = nb.filter((q: any) => q.position != null).length;
+                          return (
+                            <span style={{ color: nbHits > 0 ? "var(--good)" : "var(--attn)" }}>
+                              {s.google_reality.service_queries.length === 0
+                                ? "no non-branded phrases to test"
+                                : nb.length === 0
+                                  ? "all terms branded — not scored"
+                                  : `non-branded: ${nbHits} of ${nb.length}`}
+                            </span>
+                          );
+                        })()}
                         {s.google_reality.domain_age_days != null && (
                           <span style={{ color: s.google_reality.domain_age_days < 180 ? "var(--improve)" : "var(--muted)" }}>
                             domain {s.google_reality.domain_age_days < 90

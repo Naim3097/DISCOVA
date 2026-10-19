@@ -82,6 +82,18 @@ export function makeSearch() {
 // The searches a real customer would type, derived from the site's own words
 // with the BRAND REMOVED: a query containing the business name proves nothing
 // about whether strangers can find it. Only the non-branded remainder is tested.
+// Words that never count as "brand" even when they sit inside the brand name:
+// geography and generic marketing words. Only distinctive tokens identify a brand.
+const NON_DISTINCTIVE = new Set([
+  "malaysia", "melayu", "kuala", "lumpur", "selangor", "penang", "johor", "bahru",
+  "sabah", "sarawak", "kelantan", "kedah", "perak", "perlis", "pahang",
+  "terengganu", "melaka", "putrajaya", "langkawi",
+  "vip", "premium", "luxury", "best", "top", "online", "official", "digital",
+  "global", "group", "holdings", "enterprise", "trading", "services", "service",
+  "solutions", "solution", "shop", "store", "studio", "agency", "company",
+  "sdn", "bhd", "the", "and",
+]);
+
 export function brandTokensFor(ctx, domain) {
   const brandLabel = domain.split(".")[0].toLowerCase();
   return {
@@ -90,7 +102,7 @@ export function brandTokensFor(ctx, domain) {
       [
         ...(deriveBrand(ctx, domain).primary.toLowerCase().match(/[a-z0-9]+/g) ?? []),
         brandLabel,
-      ].filter((t) => t.length >= 3)
+      ].filter((t) => t.length >= 3 && !NON_DISTINCTIVE.has(t))
     ),
   };
 }
@@ -98,7 +110,7 @@ export function brandTokensFor(ctx, domain) {
 export function isBrandedTerm(ctx, domain, term) {
   const { brandLabel, brandWords } = brandTokensFor(ctx, domain);
   return (term.toLowerCase().match(/[a-z0-9]+/g) ?? []).some(
-    (w) => brandWords.has(w) || (w.length >= 5 && brandLabel.includes(w))
+    (w) => brandWords.has(w) || (w.length >= 5 && !NON_DISTINCTIVE.has(w) && brandLabel.includes(w))
   );
 }
 
