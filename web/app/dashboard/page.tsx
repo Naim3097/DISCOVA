@@ -111,6 +111,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             </div>
             <div className="pt-2 pb-1 border-t border-[var(--hair)]">
               <input
+                name="terms"
+                placeholder="Search terms customers would use, up to 3, comma separated (optional — otherwise derived from the site)"
+                className="w-full border border-[var(--rule)] bg-transparent px-4 py-2 text-[13px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"
+              />
+            </div>
+            <div className="pt-2 pb-1 border-t border-[var(--hair)]">
+              <input
                 name="competitors"
                 placeholder="Competitors, up to 3, comma separated — Intelligence only (optional)"
                 className="w-full border border-[var(--rule)] bg-transparent px-4 py-2 text-[13px] text-[var(--ink)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent)]"

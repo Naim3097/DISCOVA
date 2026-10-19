@@ -52,7 +52,8 @@ const DIAGNOSES = {
 
 export function diagnose(gr, findings) {
   const has = (id) => findings.some((f) => f.check_id === id);
-  const svc = gr?.service_queries ?? null;
+  const svcAll = gr?.service_queries ?? null;
+  const svc = svcAll ? svcAll.filter((s) => !s.branded) : null;
   const svcHits = svc ? svc.filter((s) => s.position != null).length : null;
 
   let code;

@@ -59,6 +59,16 @@ const bluecab = deriveServiceQueries({
 });
 check("brand stripped from derived queries", bluecab.every((q) => !/bluecab|vip/i.test(q)), JSON.stringify(bluecab));
 
+// manual terms: branded ones tested but excluded from scoring
+const grM = await googleReality(ctx, {
+  log: () => {}, searchOverride: stubSearch,
+  manualTerms: ["best skin clinic selangor", "DrKartini treatments"],
+});
+check("manual terms used", grM.terms_source === "manual" && grM.service_queries.length === 2);
+check("branded manual term flagged", grM.service_queries.some((s) => s.branded === true), JSON.stringify(grM.service_queries.map((s) => ({ q: s.q, branded: !!s.branded }))));
+const presM = presenceScore(grM, 12);
+check("branded term not scored", String(presM.components.non_branded).includes("of 1"), presM.components.non_branded);
+
 // ---- funnel ----
 const fun = funnelFrom(ctx, gr);
 check("funnel crawlable pass (PetalBot ignored)", fun.find((s) => s.key === "crawlable")?.state === "pass");

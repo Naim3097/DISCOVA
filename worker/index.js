@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { buildReportHtml, countPdfPages } from "./report.js";
 import { runAudit } from "./analyze.js";
 
-const VERSION = "0.15.0-discoverability";
+const VERSION = "0.15.1-discoverability";
 const once = process.argv.includes("--once");
 const pdfTest = process.argv.includes("--pdf-test");
 const url = process.env.DATABASE_URL;
@@ -118,6 +118,9 @@ function startServer() {
         const OBJECTIVES = ["ecommerce", "leads", "bookings", "brand"];
         const objectiveRaw = u.searchParams.get("objective") ?? "";
         const objective = OBJECTIVES.includes(objectiveRaw) ? objectiveRaw : null;
+        const terms = (u.searchParams.get("terms") ?? "")
+          .split(",").map((t) => t.trim().replace(/["']/g, "").slice(0, 70))
+          .filter((t) => t.length >= 4).slice(0, 3);
         const competitors = (u.searchParams.get("competitors") ?? "")
           .split(",").map((c) => c.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
           .filter((c) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(c) && c !== domain).slice(0, 3);
@@ -127,6 +130,7 @@ function startServer() {
           [domain, tier, JSON.stringify({
             ...(competitors.length ? { competitors_requested: competitors } : {}),
             ...(objective ? { objective_requested: objective } : {}),
+            ...(terms.length ? { terms_requested: terms } : {}),
           })]);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ id: run.id }));
@@ -157,13 +161,13 @@ function startServer() {
   server.listen(PORT, () => console.log(`[discova-worker] http listening on :${PORT}`));
 }
 
-async function processRun(runId, domain, tier = "audit", competitors = [], objective = null) {
+async function processRun(runId, domain, tier = "audit", competitors = [], objective = null, searchTerms = []) {
   const setStatus = (st) => pool.query(
     "update runs set status=$1, scores=jsonb_set(coalesce(scores,'{}'::jsonb),'{beat}',to_jsonb(now()::text)) where id=$2",
     [st, runId]);
   const log = (m) => console.log(`[discova-worker] run ${runId.slice(0, 8)} ${domain}: ${m}`);
   try {
-    const { scores, findings, pages } = await runAudit(domain, { onStatus: setStatus, log, tier, competitors, objective });
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: setStatus, log, tier, competitors, objective, searchTerms });
     await setStatus("writing");
     for (const f of findings) {
       await pool.query(
@@ -225,7 +229,7 @@ async function queueLoop(n) {
       console.log(`[discova-worker] queue worker ${n} claimed ${job.domain}`);
       await pool.query("delete from findings where run_id=$1", [job.id]);
       await pool.query("delete from pages where run_id=$1", [job.id]);
-      await processRun(job.id, job.domain, job.tier ?? "audit", job.scores?.competitors_requested ?? [], job.scores?.objective_requested ?? null);
+      await processRun(job.id, job.domain, job.tier ?? "audit", job.scores?.competitors_requested ?? [], job.scores?.objective_requested ?? null, job.scores?.terms_requested ?? []);
     } catch (e) {
       console.error(`[discova-worker] queue worker ${n} error:`, e.message);
       await new Promise((r) => setTimeout(r, 5000));
@@ -245,7 +249,9 @@ async function main() {
     const competitors = ct !== -1 ? process.argv[ct + 1].split(",") : [];
     const ob = process.argv.indexOf("--objective");
     const objective = ob !== -1 ? process.argv[ob + 1] : null;
-    const { scores, findings, pages } = await runAudit(domain, { onStatus: async () => {}, log: console.log, tier, competitors, objective });
+    const tm = process.argv.indexOf("--terms");
+    const searchTerms = tm !== -1 ? process.argv[tm + 1].split(",") : [];
+    const { scores, findings, pages } = await runAudit(domain, { onStatus: async () => {}, log: console.log, tier, competitors, objective, searchTerms });
     writeFileSync("analyze-test.json", JSON.stringify({ scores, findings, pages }, null, 2));
     console.log(`
 === ${domain} — ${scores.overall}/100 ${scores.band}${scores.design_pending ? " (design pending)" : ` (design ${scores.design_total.points}/24)`} ===`);

@@ -82,15 +82,29 @@ export function makeSearch() {
 // The searches a real customer would type, derived from the site's own words
 // with the BRAND REMOVED: a query containing the business name proves nothing
 // about whether strangers can find it. Only the non-branded remainder is tested.
+export function brandTokensFor(ctx, domain) {
+  const brandLabel = domain.split(".")[0].toLowerCase();
+  return {
+    brandLabel,
+    brandWords: new Set(
+      [
+        ...(deriveBrand(ctx, domain).primary.toLowerCase().match(/[a-z0-9]+/g) ?? []),
+        brandLabel,
+      ].filter((t) => t.length >= 3)
+    ),
+  };
+}
+
+export function isBrandedTerm(ctx, domain, term) {
+  const { brandLabel, brandWords } = brandTokensFor(ctx, domain);
+  return (term.toLowerCase().match(/[a-z0-9]+/g) ?? []).some(
+    (w) => brandWords.has(w) || (w.length >= 5 && brandLabel.includes(w))
+  );
+}
+
 export function deriveServiceQueries(ctx) {
   const domain = (ctx.domain ?? "").replace(/^www\./, "");
-  const brandLabel = domain.split(".")[0].toLowerCase();
-  const brandWords = new Set(
-    [
-      ...(deriveBrand(ctx, domain).primary.toLowerCase().match(/[a-z0-9]+/g) ?? []),
-      brandLabel,
-    ].filter((t) => t.length >= 3)
-  );
+  const { brandLabel, brandWords } = brandTokensFor(ctx, domain);
   const stripBrand = (q) =>
     q.split(/\s+/)
       .filter((w) => {
@@ -142,7 +156,7 @@ export function deriveBrand(ctx, domain) {
   return { primary, fallback: primNorm === label ? null : domain.split(".")[0] };
 }
 
-export async function googleReality(ctx, { log, searchOverride = null }) {
+export async function googleReality(ctx, { log, searchOverride = null, manualTerms = [] }) {
   const domain = ctx.domain.replace(/^www\./, "");
   const search = searchOverride ?? makeSearch(); // override exists for the self-test only
   const out = { checked_at: new Date().toISOString().slice(0, 10) };
@@ -187,7 +201,9 @@ export async function googleReality(ctx, { log, searchOverride = null }) {
     out.brand_found = pos !== -1;
     if (pos !== -1) out.brand_position = pos + 1;
 
-    const candidates = deriveServiceQueries(ctx);
+    const manual = (manualTerms ?? []).filter((t) => t && t.length >= 4).slice(0, 3);
+    const candidates = manual.length ? manual : deriveServiceQueries(ctx);
+    out.terms_source = manual.length ? "manual" : "derived";
     out.service_queries = [];
     for (const q of candidates) {
       await sleep(600);
@@ -195,7 +211,11 @@ export async function googleReality(ctx, { log, searchOverride = null }) {
       const spos = sres.items.findIndex((i) => {
         try { return new URL(i.link).hostname.replace(/^www\./, "").endsWith(domain); } catch { return false; }
       });
-      out.service_queries.push({ q, position: spos === -1 ? null : spos + 1 });
+      out.service_queries.push({
+        q,
+        position: spos === -1 ? null : spos + 1,
+        branded: isBrandedTerm(ctx, domain, q) || undefined, // branded terms shown but never scored
+      });
     }
     if (out.service_queries.length)
       log(`google reality: service queries ${out.service_queries.map((s) => `"${s.q}" ${s.position ? "#" + s.position : "not top 10"}`).join(" | ")}`);
@@ -223,7 +243,7 @@ export function realityForWriter(gr) {
   if (gr.domain_age_days != null && gr.domain_age_days < 180) {
     bits.push(`the web address is only ${gr.domain_age_days} days old`);
   }
-  const svc = gr.service_queries ?? null;
+  const svc = (gr.service_queries ?? null) && gr.service_queries.filter((s) => !s.branded);
   if (svc && svc.length) {
     const hits = svc.filter((s) => s.position != null);
     if (hits.length === 0)
@@ -251,9 +271,10 @@ export function presenceScore(gr, builtPages) {
   const namePts = gr.brand_position != null
     ? (gr.brand_position <= 3 ? 20 : 14)
     : 0;
-  const svc = gr.service_queries ?? null;
+  const svcAll = gr.service_queries ?? null;
+  const svc = svcAll ? svcAll.filter((s) => !s.branded) : null;
   const hits = svc ? svc.filter((s) => s.position != null).length : null;
-  const svcPts = hits == null ? (svc ? 0 : null) : hits >= 2 ? 50 : hits === 1 ? 35 : 0;
+  const svcPts = hits == null ? (svcAll ? 0 : null) : svc.length === 0 ? 0 : hits >= 2 ? 50 : hits === 1 ? 35 : 0;
   const score = svcPts == null
     ? Math.round(((indexPts + namePts) / 50) * 100)
     : Math.min(100, indexPts + namePts + svcPts);
@@ -262,11 +283,13 @@ export function presenceScore(gr, builtPages) {
     components: {
       indexed: `${gr.indexed_at_least ? "10+" : gr.indexed_pages} pages listed (checked against ${base}) -> ${indexPts}/30`,
       own_name: gr.brand_position != null ? `found #${gr.brand_position} -> ${namePts}/20` : "not found in top 10 -> 0/20",
-      non_branded: svc == null
+      non_branded: svcAll == null
         ? "not measured"
         : svc.length === 0
-          ? "no non-branded phrase derivable from the site's copy -> 0/50 (the copy only talks about the brand)"
-          : `found for ${hits} of ${svc.length} non-branded searches -> ${svcPts}/50`,
+          ? (gr.terms_source === "manual"
+              ? "every term provided contains the brand name -> 0/50 (branded terms are shown but never scored)"
+              : "no non-branded phrase derivable from the site's copy -> 0/50 (the copy only talks about the brand)")
+          : `found for ${hits} of ${svc.length} non-branded searches${gr.terms_source === "manual" ? " (your terms)" : ""} -> ${svcPts}/50`,
     },
   };
 }

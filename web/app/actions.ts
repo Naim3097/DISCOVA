@@ -6,6 +6,7 @@ export async function startAudit(formData: FormData) {
   const rawTier = String(formData.get("tier") ?? "audit");
   const tier = ["audit", "investigation", "intelligence"].includes(rawTier) ? rawTier : "audit";
   const competitors = String(formData.get("competitors") ?? "").trim();
+  const terms = String(formData.get("terms") ?? "").trim();
   const objectiveRaw = String(formData.get("objective") ?? "");
   const objective = ["ecommerce", "leads", "bookings", "brand"].includes(objectiveRaw) ? objectiveRaw : "";
   const base = process.env.WORKER_URL;
@@ -15,6 +16,7 @@ export async function startAudit(formData: FormData) {
     const r = await fetch(
       `${base.replace(/\/+$/, "")}/analyze?domain=${encodeURIComponent(domain)}&tier=${tier}` +
         (objective ? `&objective=${objective}` : "") +
+        (terms ? `&terms=${encodeURIComponent(terms)}` : "") +
         (tier === "intelligence" && competitors ? `&competitors=${encodeURIComponent(competitors)}` : ""),
       {
         method: "POST",

@@ -328,7 +328,7 @@ export function detectObjective(dom) {
   return "brand";
 }
 
-export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [], objective = null, searchOverride = null } = {}) {
+export async function runAudit(domain, { onStatus = () => {}, log = console.log, tier = "audit", competitors = [], objective = null, searchTerms = [], searchOverride = null } = {}) {
   const ctx = { domain, probes: {}, dom: {} };
   resetUsage();
 
@@ -386,7 +386,7 @@ export async function runAudit(domain, { onStatus = () => {}, log = console.log,
   if (design) log(`design review: ${design.points}/24`);
   else log("design review pending (no vision available)");
 
-  const gr = await googleReality(ctx, { log, searchOverride }).catch((e) => ({ error: e.message }));
+  const gr = await googleReality(ctx, { log, searchOverride, manualTerms: searchTerms }).catch((e) => ({ error: e.message }));
   const auth = await authorityLite(ctx, { search: searchOverride ?? makeSearch(), log }).catch(() => ({ findings: [] }));
   for (const f of auth.findings ?? []) findings.push({ ...f, category: CATS.A, score_impact: 0 });
 

@@ -247,10 +247,14 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
                       )}
                       {Array.isArray(s.google_reality.service_queries) && s.google_reality.service_queries.length > 0 && (
                         <div className="mt-3">
-                          <p className="text-[10px] tracking-[.12em] uppercase text-[var(--muted)] mb-1">Customer searches tested</p>
+                          <p className="text-[10px] tracking-[.12em] uppercase text-[var(--muted)] mb-1">
+                            Customer searches tested{s.google_reality.terms_source === "manual" ? " · set by you" : ""}
+                          </p>
                           {s.google_reality.service_queries.map((sq: any) => (
                             <p key={sq.q} className="text-[12px] flex justify-between gap-3 py-0.5">
-                              <span className="text-[var(--ink)] truncate">&ldquo;{sq.q}&rdquo;</span>
+                              <span className="text-[var(--ink)] truncate">
+                                &ldquo;{sq.q}&rdquo;{sq.branded ? <span className="text-[var(--faint)]"> (branded — not scored)</span> : null}
+                              </span>
                               <span className="shrink-0 tabular-nums"
                                 style={{ color: sq.position != null ? "var(--good)" : "var(--attn)" }}>
                                 {sq.position != null ? `#${sq.position}` : "not in top 10"}
