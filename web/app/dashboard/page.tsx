@@ -26,10 +26,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
     );
   }
 
-  const [{ data: beat }, { data: runs, error }] = await Promise.all([
+  const [{ data: beat }, { data: runs, error }, { data: allRuns }] = await Promise.all([
     client.from("worker_heartbeat").select("last_beat, version").eq("id", 1).maybeSingle(),
     client.from("runs").select("id, domain, tier, status, started_at, scores").order("started_at", { ascending: false }).limit(50),
+    client.from("runs").select("domain, cost:scores->run_cost->>total_usd"),
   ]);
+  const uniqueSites = new Set((allRuns ?? []).map((r: any) => String(r.domain ?? "").replace(/^www./, ""))).size;
+  const recordedCost = (allRuns ?? []).reduce((s: number, r: any) => s + (Number(r.cost) || 0), 0);
 
   const beatAge = beat ? (Date.now() - new Date(beat.last_beat).getTime()) / 1000 : null;
   const engineAlive = beatAge !== null && beatAge < 90;
@@ -129,7 +132,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
 
       {/* Runs */}
       <div className="bg-[var(--paper)] px-4 sm:px-8 py-7">
-        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <p className="text-[11px] tracking-[.14em] uppercase text-[var(--muted)]">Runs</p>
+          <p className="text-[11px] font-mono text-[var(--faint)]">
+            all time: {(allRuns ?? []).length} runs · {uniqueSites} unique sites · ${recordedCost.toFixed(2)} engine cost recorded
+          </p>
+        </div>
         {error && <p className="mt-4 text-sm text-[var(--attn)]">Query failed: {error.message}</p>}
         {runs && runs.length === 0 && <p className="mt-4 text-sm text-[var(--muted)]">No runs yet.</p>}
         <div className="mt-2">
